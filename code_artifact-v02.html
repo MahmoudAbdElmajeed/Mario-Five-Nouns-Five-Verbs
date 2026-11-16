@@ -1,0 +1,2631 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>مغامرة مملكة النحو | لعبة منصّات تعليمية</title>
+  <!-- تحميل مكتبة Tailwind CSS للتصميم المتجاوب -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- تحميل خطوط عربية واضحة ومناسبة للتشكيل -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@700&family=Cairo:wght@500;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --ui-scale: 1;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: radial-gradient(circle at top, #1e293b 0%, #0f172a 100%);
+      color: #f8fafc;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .arabic-grammar-text {
+      font-family: 'Amiri', 'Cairo', serif;
+      line-height: 1.85;
+    }
+
+    /* أحجام الخطوط حسب إعدادات التمايز UDL */
+    .font-size-normal { --q-title: 1.35rem; --q-body: 1.2rem; --q-opt: 1.1rem; }
+    .font-size-large  { --q-title: 1.65rem; --q-body: 1.45rem; --q-opt: 1.3rem; }
+    .font-size-xlarge { --q-title: 1.95rem; --q-body: 1.75rem; --q-opt: 1.55rem; }
+
+    .q-title-text { font-size: var(--q-title, 1.35rem); }
+    .q-body-text  { font-size: var(--q-body, 1.2rem); }
+    .q-opt-text   { font-size: var(--q-opt, 1.1rem); }
+
+    /* تنسيق حاوية اللوحة Canvas */
+    #game-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 1040px;
+      aspect-ratio: 16 / 9;
+      max-height: 68vh;
+      margin: 0 auto;
+      border-radius: 1.25rem;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55), 0 0 0 4px rgba(251, 191, 36, 0.35);
+      background: #38bdf8;
+    }
+
+    canvas#gameCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* أزرار الألعاب ذات المظهر الكلاسيكي ثلاثي الأبعاد */
+    .retro-btn {
+      transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.15s ease;
+      box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
+    }
+    .retro-btn:hover {
+      filter: brightness(1.07);
+    }
+    .retro-btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+    }
+
+    /* حركات ناعمة للنوافذ والشارات */
+    @keyframes popIn {
+      0% { transform: scale(0.88); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-pop {
+      animation: popIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes floatSlow {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-6px); }
+    }
+    .animate-float {
+      animation: floatSlow 2.5s ease-in-out infinite;
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.3); border-radius: 8px; }
+    ::-webkit-scrollbar-thumb { background: rgba(251, 191, 36, 0.6); border-radius: 8px; }
+  </style>
+</head>
+<body class="font-size-normal">
+
+  <!-- الشريط العلوي: لوحة المعلومات وإعدادات التمايز UDL -->
+  <header class="w-full max-w-6xl mx-auto px-3 pt-2 pb-1 flex flex-wrap items-center justify-between gap-2">
+    <!-- الهوية والنقاط -->
+    <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+      <div class="bg-gradient-to-l from-amber-500 to-yellow-400 text-slate-950 font-black px-3 py-1.5 rounded-xl shadow-md flex items-center gap-1.5 text-sm sm:text-base">
+        <span>👑</span>
+        <span>مملكة النحو</span>
+      </div>
+
+      <!-- العدادات -->
+      <div class="flex items-center gap-2 bg-slate-800/90 border border-slate-700 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold">
+        <span id="hud-lives" class="tracking-tight" title="المحاولات المتبقية">❤️❤️❤️</span>
+        <span class="text-slate-600">|</span>
+        <span class="text-amber-400">🪙 <span id="hud-coins">0</span></span>
+        <span class="text-slate-600">|</span>
+        <span class="text-emerald-400">⭐ <span id="hud-score">0</span></span>
+        <span class="text-slate-600">|</span>
+        <span id="hud-powerup" class="text-sky-300">🛡️ عادي</span>
+      </div>
+    </div>
+
+    <!-- اختيار المرحلة وأزرار التمايز والدعم (UDL) -->
+    <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+      <select id="stage-selector" aria-label="اختيار المرحلة" class="bg-slate-800 border border-slate-600 text-amber-300 font-bold text-xs sm:text-sm rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-amber-400 cursor-pointer">
+        <option value="0">1. غابة الأفعال الخمسة 🌲</option>
+        <option value="1">2. صحراء الأسماء الخمسة 🏜️</option>
+        <option value="2">3. قلعة التمييز والتحدي 🏰</option>
+        <option value="3">4. مملكة السماء النهائية ☁️</option>
+      </select>
+
+      <button id="btn-font-size" title="تكبير الخط" class="retro-btn bg-indigo-600 text-white font-bold text-xs sm:text-sm px-2.5 py-1.5 rounded-xl flex items-center gap-1 cursor-pointer">
+        <span>أ+</span>
+        <span class="hidden md:inline" id="font-size-label">خط عادي</span>
+      </button>
+
+      <button id="btn-difficulty" title="تبديل مستوى الصعوبة" class="retro-btn bg-teal-600 text-white font-bold text-xs sm:text-sm px-2.5 py-1.5 rounded-xl flex items-center gap-1 cursor-pointer">
+        <span>🎯</span>
+        <span id="difficulty-label">مبتدئ</span>
+      </button>
+
+      <button id="btn-timer-toggle" title="تفعيل أو إيقاف مؤقت الأسئلة" class="retro-btn bg-slate-700 text-amber-200 font-bold text-xs sm:text-sm px-2.5 py-1.5 rounded-xl flex items-center gap-1 cursor-pointer">
+        <span>⏱️</span>
+        <span class="hidden sm:inline" id="timer-label">مؤقت: مفعّل</span>
+      </button>
+
+      <button id="btn-badges" title="الأوسمة ولوحة الأبطال" class="retro-btn bg-amber-500 text-slate-950 font-extrabold text-xs sm:text-sm px-2.5 py-1.5 rounded-xl flex items-center gap-1 cursor-pointer">
+        <span>🏅</span>
+        <span class="hidden sm:inline">الأوسمة</span>
+        <span id="badge-count" class="bg-slate-900 text-amber-400 px-1.5 rounded-full text-xs">0/5</span>
+      </button>
+
+      <button id="btn-mute" title="تشغيل أو كتم الصوت" class="retro-btn bg-slate-700 text-white font-bold text-xs sm:text-sm px-2.5 py-1.5 rounded-xl cursor-pointer">
+        🔊
+      </button>
+    </div>
+  </header>
+
+  <!-- منطقة اللعب الرئيسية -->
+  <main class="flex-1 flex flex-col items-center justify-center px-2 sm:px-4 py-1">
+    <div id="game-wrapper">
+      <canvas id="gameCanvas"></canvas>
+
+      <!-- شاشة البداية فوق الكانفاس -->
+      <div id="start-overlay" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center z-20">
+        <div class="max-w-xl bg-slate-900/95 border-2 border-amber-400 rounded-3xl p-5 sm:p-7 shadow-2xl animate-pop">
+          <div class="text-4xl sm:text-5xl mb-2 animate-float">🏰✨👑</div>
+          <h1 class="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-l from-amber-300 via-yellow-400 to-emerald-300 mb-2">
+            مغامرة مملكة النحو
+          </h1>
+          <p class="text-slate-300 text-sm sm:text-base mb-4 leading-relaxed">
+            انطلق مع <strong class="text-amber-300">فارس النحو</strong> عبر 4 عوالم مشوّقة! اجمع العملات، اضرب كتل الاستفهام (<span class="text-yellow-400 font-bold">؟</span>)، انزل في <span class="text-emerald-400 font-bold">المواسير الخضراء</span>، وأجب عن تحديات <strong class="text-sky-300">الأفعال الخمسة</strong> و<strong class="text-rose-300">الأسماء الخمسة</strong> مع ذكر الدليل النحوي.
+          </p>
+
+          <!-- دليل المفاتيح السريع -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs bg-slate-800/90 p-3 rounded-2xl mb-5 border border-slate-700">
+            <div class="flex flex-col items-center gap-1">
+              <span class="bg-slate-700 px-2 py-1 rounded-lg font-mono text-amber-300">◀ ▶ / A D</span>
+              <span class="text-slate-300">الحركة</span>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+              <span class="bg-slate-700 px-2 py-1 rounded-lg font-mono text-amber-300">Space ×2</span>
+              <span class="text-slate-300">قفز / قفز عالٍ</span>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+              <span class="bg-slate-700 px-2 py-1 rounded-lg font-mono text-emerald-300">▼ / S</span>
+              <span class="text-slate-300">دخول الماسورة</span>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+              <span class="bg-slate-700 px-2 py-1 rounded-lg font-mono text-rose-300">Z / Shift</span>
+              <span class="text-slate-300">كرة اللهب 🔥</span>
+            </div>
+          </div>
+
+          <button id="btn-start-game" type="button" class="retro-btn w-full sm:w-auto bg-gradient-to-l from-emerald-500 to-green-600 text-white font-black text-lg sm:text-xl px-8 py-3.5 rounded-2xl shadow-lg cursor-pointer">
+            🚀 ابدأ المغامرة الآن!
+          </button>
+        </div>
+      </div>
+
+      <!-- إشعار عائم داخل اللعبة -->
+      <div id="toast-banner" class="hidden absolute top-3 left-1/2 -translate-x-1/2 z-30 bg-slate-900/95 border-2 border-amber-400 text-white px-4 py-2 rounded-2xl shadow-xl font-bold text-sm sm:text-base flex items-center gap-2 pointer-events-none">
+        <span id="toast-icon">🌟</span>
+        <span id="toast-text">أحسنت يا بطل!</span>
+      </div>
+    </div>
+
+    <!-- أزرار التحكم باللمس -->
+    <div class="w-full max-w-5xl mx-auto mt-2.5 px-2 flex items-center justify-between gap-2 select-none">
+      <div class="flex items-center gap-2">
+        <button id="touch-right" type="button" aria-label="يمين" class="retro-btn w-12 h-12 sm:w-14 sm:h-14 bg-slate-800 active:bg-amber-500 border-2 border-slate-600 rounded-2xl text-2xl font-black text-white flex items-center justify-center">
+          ▶
+        </button>
+        <button id="touch-left" type="button" aria-label="يسار" class="retro-btn w-12 h-12 sm:w-14 sm:h-14 bg-slate-800 active:bg-amber-500 border-2 border-slate-600 rounded-2xl text-2xl font-black text-white flex items-center justify-center">
+          ◀
+        </button>
+        <button id="touch-down" type="button" aria-label="دخول الماسورة" class="retro-btn px-3 h-12 sm:h-14 bg-emerald-800/90 active:bg-emerald-600 border-2 border-emerald-500 rounded-2xl text-xs sm:text-sm font-extrabold text-emerald-100 flex flex-col items-center justify-center">
+          <span>▼</span>
+          <span>ماسورة</span>
+        </button>
+      </div>
+
+      <div id="stage-hint-bar" class="hidden md:flex items-center gap-2 bg-slate-800/80 border border-slate-700 px-4 py-2 rounded-2xl text-xs text-slate-300">
+        <span class="text-amber-400 font-bold">💡 تلميح المرحلة:</span>
+        <span id="stage-hint-text">الأفعال الخمسة هي كل فعل مضارع اتصلت به ألف الاثنين أو واو الجماعة أو ياء المخاطبة.</span>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button id="touch-fire" type="button" aria-label="إطلاق كرة اللهب" class="retro-btn px-3.5 h-12 sm:h-14 bg-rose-700 active:bg-rose-500 border-2 border-rose-400 rounded-2xl text-xs sm:text-sm font-extrabold text-white flex flex-col items-center justify-center">
+          <span>🔥</span>
+          <span>نار</span>
+        </button>
+        <button id="touch-jump" type="button" aria-label="قفز" class="retro-btn px-5 h-12 sm:h-14 bg-amber-500 active:bg-amber-400 border-2 border-yellow-300 rounded-2xl text-base sm:text-lg font-black text-slate-950 flex items-center justify-center gap-1">
+          <span>▲</span>
+          <span>قفز</span>
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- نافذة السؤال التعليمي عند نقاط التفتيش (Checkpoint Modal) -->
+  <div id="checkpoint-modal" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-md z-40 flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+    <div class="w-full max-w-2xl bg-gradient-to-b from-slate-900 to-slate-950 border-4 border-amber-400 rounded-3xl shadow-2xl p-4 sm:p-6 animate-pop my-auto">
+      <div class="flex items-center justify-between gap-2 border-b border-slate-800 pb-3 mb-4">
+        <div class="flex items-center gap-2">
+          <span id="cp-badge-icon" class="text-2xl sm:text-3xl">🚩</span>
+          <div>
+            <h2 id="cp-title" class="font-black text-amber-400 text-base sm:text-lg">نقطة تفتيش نحوية!</h2>
+            <p id="cp-subtitle" class="text-xs text-slate-400">أجب عن السؤال واذكر الدليل النحوي لفتح البوابة</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <div id="cp-timer-box" class="hidden bg-rose-950 border border-rose-500 text-rose-300 font-black px-3 py-1 rounded-xl text-sm">
+            ⏱️ <span id="cp-timer-val">20</span>ث
+          </div>
+          <button id="btn-read-aloud" type="button" class="retro-btn bg-sky-600 hover:bg-sky-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs sm:text-sm flex items-center gap-1 cursor-pointer" title="استمع للسؤال">
+            <span>🔊</span>
+            <span>اقرأ</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-slate-800/90 border border-slate-700 rounded-2xl p-4 mb-4">
+        <p id="cp-question-text" class="q-title-text arabic-grammar-text font-bold text-white text-center leading-relaxed"></p>
+      </div>
+
+      <div id="cp-interaction-area" class="mb-4"></div>
+
+      <div id="cp-evidence-box" class="hidden bg-emerald-950/60 border-2 border-emerald-500 rounded-2xl p-4 mb-4 animate-pop">
+        <p class="font-black text-emerald-300 text-sm sm:text-base mb-2.5">🧠 الخطوة الثانية: اختر الدليل النحوي لإجابتك:</p>
+        <div id="cp-evidence-options" class="grid grid-cols-1 gap-2"></div>
+      </div>
+
+      <div id="cp-feedback-box" class="hidden rounded-2xl p-3.5 text-sm sm:text-base font-bold text-center"></div>
+    </div>
+  </div>
+
+  <!-- نافذة إتمام المرحلة (Stage Complete Modal) -->
+  <div id="stage-complete-modal" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-md z-40 flex items-center justify-center p-4">
+    <div class="w-full max-w-lg bg-gradient-to-b from-slate-900 to-slate-950 border-4 border-emerald-400 rounded-3xl p-6 text-center shadow-2xl animate-pop">
+      <div id="sc-emoji" class="text-5xl mb-3">🎉🚩🎉</div>
+      <h2 id="sc-title" class="text-2xl sm:text-3xl font-black text-emerald-300 mb-2">أحسنت! أتممت المرحلة</h2>
+      <p id="sc-desc" class="text-slate-300 text-sm sm:text-base mb-5 leading-relaxed"></p>
+
+      <div class="grid grid-cols-2 gap-3 bg-slate-800/80 border border-slate-700 rounded-2xl p-3.5 mb-5">
+        <div>
+          <div class="text-xs text-slate-400">مجموع النقاط</div>
+          <div id="sc-score" class="text-2xl font-black text-amber-400">0</div>
+        </div>
+        <div>
+          <div class="text-xs text-slate-400">العملات الذهبية</div>
+          <div id="sc-coins" class="text-2xl font-black text-yellow-300">0</div>
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-2.5 justify-center">
+        <button id="btn-next-stage" type="button" class="retro-btn flex-1 bg-gradient-to-l from-emerald-500 to-green-600 text-white font-black py-3 px-5 rounded-2xl text-base cursor-pointer">
+          المرحلة التالية ⬅️
+        </button>
+        <button id="btn-replay-stage" type="button" class="retro-btn bg-slate-700 text-slate-200 font-bold py-3 px-4 rounded-2xl text-sm cursor-pointer">
+          إعادة المرحلة 🔄
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة انتهاء المحاولات (Game Over Modal) -->
+  <div id="game-over-modal" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md z-40 flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-gradient-to-b from-slate-900 to-slate-950 border-4 border-rose-500 rounded-3xl p-6 text-center shadow-2xl animate-pop">
+      <div class="text-5xl mb-3">💔🏰💔</div>
+      <h2 class="text-2xl sm:text-3xl font-black text-rose-400 mb-2">انتهت محاولاتك!</h2>
+      <p class="text-slate-300 text-sm sm:text-base mb-5 leading-relaxed">
+        لا بأس يا بطل! كل محاولة تقرّبك من إتقان الأفعال الخمسة والأسماء الخمسة. ابدأ المرحلة من جديد وركّز في القفزات والأسئلة!
+      </p>
+      <button id="btn-restart-stage" type="button" class="retro-btn w-full bg-gradient-to-l from-amber-500 to-yellow-400 text-slate-950 font-black py-3.5 px-6 rounded-2xl text-lg cursor-pointer">
+        🔄 إعادة المرحلة من البداية
+      </button>
+    </div>
+  </div>
+
+  <!-- نافذة الأوسمة ولوحة المتصدرين الودية -->
+  <div id="badges-modal" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-md z-40 flex items-center justify-center p-4 overflow-y-auto">
+    <div class="w-full max-w-2xl bg-slate-900 border-4 border-amber-400 rounded-3xl p-5 sm:p-6 shadow-2xl animate-pop my-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+        <h2 class="text-xl sm:text-2xl font-black text-amber-400 flex items-center gap-2">
+          <span>🏅</span>
+          <span>أوسمة الإنجاز ولوحة الأبطال</span>
+        </h2>
+        <button id="btn-close-badges" type="button" class="retro-btn bg-slate-800 hover:bg-rose-600 text-white font-bold px-3 py-1.5 rounded-xl text-sm cursor-pointer">
+          إغلاق ✕
+        </button>
+      </div>
+
+      <div id="badges-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-5"></div>
+
+      <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5">
+        <h3 class="font-black text-sky-300 text-sm mb-2.5">🏆 لوحة فرسان النحو (ترتيب ودّي)</h3>
+        <div id="leaderboard-list" class="space-y-2 text-sm"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ============================================================================
+// 1. محرك المؤثرات الصوتية الكلاسيكية (Web Audio API 8-bit)
+// ============================================================================
+const SoundEngine = {
+  ctx: null,
+  muted: false,
+
+  init() {
+    if (!this.ctx) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        this.ctx = new AudioCtx();
+      }
+    }
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+  },
+
+  playTone(freq, type = 'square', duration = 0.12, endFreq = null, vol = 0.12, delay = 0) {
+    if (this.muted) return;
+    this.init();
+    if (!this.ctx) return;
+    try {
+      const startTime = this.ctx.currentTime + delay;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, startTime);
+      if (endFreq) {
+        osc.frequency.exponentialRampToValueAtTime(endFreq, startTime + duration);
+      }
+      gain.gain.setValueAtTime(vol, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    } catch (e) {}
+  },
+
+  jump() {
+    this.playTone(230, 'square', 0.16, 560, 0.11);
+  },
+
+  highJump() {
+    this.playTone(320, 'square', 0.18, 780, 0.13);
+    this.playTone(520, 'triangle', 0.14, 960, 0.11, 0.065);
+  },
+
+  // صوت العملة الشهير في ماريو (B5 -> E6)
+  coin() {
+    this.playTone(987.77, 'square', 0.08, null, 0.11, 0);
+    this.playTone(1318.51, 'square', 0.28, null, 0.11, 0.075);
+  },
+
+  // صوت خروج الفطر من كتلة الاستفهام
+  powerupSprout() {
+    const notes = [261.6, 329.6, 392.0, 523.3, 659.3];
+    notes.forEach((n, idx) => this.playTone(n, 'triangle', 0.07, null, 0.11, idx * 0.055));
+  },
+
+  // صوت أكل المكبر أو شعلة النار في ماريو
+  powerup() {
+    const notes = [330, 392, 659, 523, 587, 784, 392, 494, 784, 659, 740, 988];
+    notes.forEach((n, idx) => this.playTone(n, 'square', 0.065, null, 0.11, idx * 0.05));
+  },
+
+  // صوت إطلاق كرة النار في ماريو
+  fireball() {
+    this.playTone(440, 'square', 0.09, 1760, 0.1);
+  },
+
+  // صوت سحق الوحوش بالقفز فوقها
+  stomp() {
+    this.playTone(280, 'square', 0.09, 95, 0.14);
+    this.playTone(520, 'triangle', 0.07, 180, 0.1, 0.04);
+  },
+
+  // صوت ركل الصدفة أو إصابة الوحوش بكرة النار
+  kick() {
+    this.playTone(190, 'sawtooth', 0.11, 620, 0.13);
+  },
+
+  blockHit() {
+    this.playTone(150, 'triangle', 0.09, 85, 0.14);
+  },
+
+  pipe() {
+    this.playTone(320, 'square', 0.08, 180, 0.11, 0);
+    this.playTone(260, 'square', 0.08, 140, 0.11, 0.09);
+    this.playTone(200, 'square', 0.11, 100, 0.11, 0.18);
+  },
+
+  checkpoint() {
+    const notes = [523.25, 659.25, 783.99, 1046.5];
+    notes.forEach((n, idx) => this.playTone(n, 'triangle', 0.14, null, 0.13, idx * 0.08));
+  },
+
+  correct() {
+    const notes = [523.25, 659.25, 783.99, 1046.5, 1318.5];
+    notes.forEach((n, idx) => this.playTone(n, 'square', 0.13, null, 0.11, idx * 0.07));
+  },
+
+  wrong() {
+    this.playTone(195, 'sawtooth', 0.18, 130, 0.12, 0);
+    this.playTone(155, 'sawtooth', 0.24, 105, 0.12, 0.14);
+  },
+
+  // مقطوعة موت ماريو الشهيرة
+  marioDeath() {
+    const seq = [
+      { f: 493.88, d: 0.11, t: 0.18 },
+      { f: 698.46, d: 0.13, t: 0.30 },
+      { f: 698.46, d: 0.11, t: 0.48 },
+      { f: 698.46, d: 0.12, t: 0.62 },
+      { f: 659.25, d: 0.12, t: 0.76 },
+      { f: 587.33, d: 0.12, t: 0.90 },
+      { f: 523.25, d: 0.16, t: 1.04 },
+      { f: 329.63, d: 0.12, t: 1.22 },
+      { f: 261.63, d: 0.26, t: 1.36 }
+    ];
+    seq.forEach(item => this.playTone(item.f, 'square', item.d, null, 0.12, item.t));
+  },
+
+  stageClear() {
+    const notes = [392, 523.25, 659.25, 783.99, 659.25, 1046.5];
+    notes.forEach((n, idx) => this.playTone(n, 'square', 0.16, null, 0.12, idx * 0.11));
+  }
+};
+
+// ============================================================================
+// 2. بنك المراحل والأسئلة التعليمية (الأفعال الخمسة والأسماء الخمسة)
+// ============================================================================
+const STAGES_DATA = [
+  {
+    id: 0,
+    title: 'غابة الأفعال الخمسة',
+    theme: 'forest',
+    skyTop: '#0284c7',
+    skyBottom: '#7dd3fc',
+    groundTop: '#16a34a',
+    groundFill: '#78350f',
+    hint: 'الأفعال الخمسة هي كل فعل مضارع اتصلت به ألف الاثنين أو واو الجماعة أو ياء المخاطبة.',
+    levelWidth: 3750,
+    checkpoints: [
+      {
+        id: 's1_cp1',
+        x: 1520,
+        type: 'mcq',
+        badgeKey: 'waw',
+        question: 'ما نوع كلمة «يَكْتُبُونَ» في الجملة: (الطلابُ يَكْتُبُونَ الدرسَ)؟',
+        options: [
+          { text: 'فعلٌ مضارعٌ من الأفعالِ الخمسة', correct: true },
+          { text: 'اسمٌ معربٌ من الأسماءِ الخمسة', correct: false },
+          { text: 'اسمُ جمعٍ للمذكرِ السالمِ المرفوع', correct: false },
+          { text: 'فعلُ أمرٍ مبنيٌّ على حذفِ النون', correct: false }
+        ],
+        evidenceQuestion: 'اختر الدليل النحوي الصحيح لكلمة «يَكْتُبُونَ»:',
+        evidenceOptions: [
+          { text: 'لأنها فعلٌ مضارعٌ اتصلت بآخره واوُ الجماعة', correct: true },
+          { text: 'لأنها اسمٌ مفردٌ أُضيف إلى ضميرٍ متصل', correct: false },
+          { text: 'لأنها فعلٌ ماضٍ اتصلت به واوُ الجماعة', correct: false },
+          { text: 'لأنها اسمٌ يدلُّ على الجمعِ بزيادة الواو', correct: false }
+        ],
+        hint: 'انظر إلى أول الكلمة (يـ) فهي تدل على الفعل المضارع، واتصلت بآخرها (واو الجماعة)!'
+      },
+      {
+        id: 's1_cp2',
+        x: 3250,
+        type: 'mcq',
+        badgeKey: 'yaa',
+        question: 'حدّد الكلمة التي تنتمي إلى الأفعال الخمسة مما يلي:',
+        options: [
+          { text: 'تُحَافِظِينَ على النظافة', correct: true },
+          { text: 'مُعَلِّمُونَ في المدرسة', correct: false },
+          { text: 'أَخُوكَ طالبٌ مجتهد', correct: false },
+          { text: 'كَتَبُوا الدرسَ كاملاً', correct: false }
+        ],
+        evidenceQuestion: 'لماذا تُعدّ كلمة «تُحَافِظِينَ» من الأفعال الخمسة؟',
+        evidenceOptions: [
+          { text: 'لأنها فعلٌ مضارعٌ اتصلت بآخره ياءُ المخاطبة', correct: true },
+          { text: 'لأنها اسمٌ يدلُّ على الجمعِ المذكرِ السالم', correct: false },
+          { text: 'لأنها اسمٌ من الأسماءِ الخمسة مرفوعٌ بالواو', correct: false },
+          { text: 'لأنها فعلٌ ماضٍ مبنيٌّ على السكونِ لاتصاله بالياء', correct: false }
+        ],
+        hint: 'تذكّر: «معلمون» اسم يدل على الجمع، أما «تُحافظين» فهو فعل مضارع يخاطب المفردة المؤنثة بياء المخاطبة.'
+      }
+    ]
+  },
+  {
+    id: 1,
+    title: 'صحراء الأسماء الخمسة',
+    theme: 'desert',
+    skyTop: '#d97706',
+    skyBottom: '#fde68a',
+    groundTop: '#f59e0b',
+    groundFill: '#92400e',
+    hint: 'الأسماء الخمسة هي: (أب، أخ، حَم، فو، ذو) بشرط أن تكون مفردة ومضافة لغير ياء المتكلم.',
+    levelWidth: 3750,
+    checkpoints: [
+      {
+        id: 's2_cp1',
+        x: 1520,
+        type: 'mcq',
+        badgeKey: 'nouns5',
+        question: 'ما نوع كلمة «أَبُوهُ» في الجملة: (يُحِبُّ الولدُ أَبَاهُ، وَيُسَاعِدُهُ أَبُوهُ)؟',
+        options: [
+          { text: 'اسمٌ معربٌ من الأسماءِ الخمسة', correct: true },
+          { text: 'فعلٌ مضارعٌ من الأفعالِ الخمسة', correct: false },
+          { text: 'فعلُ أمرٍ مبنيٌّ على السكون', correct: false },
+          { text: 'اسمٌ مثنًّى مرفوعٌ بالألفِ الظاهرة', correct: false }
+        ],
+        evidenceQuestion: 'ما الدليل النحوي على أن «أَبُوهُ» من الأسماء الخمسة؟',
+        evidenceOptions: [
+          { text: 'لأنه اسمٌ مفردٌ أُضيف إلى ضميرٍ ظاهر (الهاء)', correct: true },
+          { text: 'لأنه فعلٌ مضارعٌ اتصلت بآخره ألفُ الاثنين', correct: false },
+          { text: 'لأنه اسمٌ مثنًّى أُضيف إلى ياءِ المتكلم', correct: false },
+          { text: 'لأنه فعلٌ ماضٍ اتصلت بآخره واوُ الجماعة', correct: false }
+        ],
+        hint: 'كلمة «أب» اسم مفرد أُضيف إلى الضمير (الهاء)، لذا هو من الأسماء الخمسة!'
+      },
+      {
+        id: 's2_cp2',
+        x: 3250,
+        type: 'order',
+        badgeKey: 'nouns5',
+        question: 'رتّب الكلمات التالية لتكوين جملة مفيدة تشتمل على اسم من الأسماء الخمسة:',
+        words: ['مَحْبُوبٌ', 'ذُو', 'العِلْمِ', 'وَالْأَدَبِ'],
+        correctOrder: ['ذُو', 'العِلْمِ', 'وَالْأَدَبِ', 'مَحْبُوبٌ'],
+        evidenceQuestion: 'اختر الدليل النحوي لكلمة «ذُو» في الجملة المرتّبة:',
+        evidenceOptions: [
+          { text: 'اسمٌ من الأسماءِ الخمسة بمعنى (صاحب) مضافٌ لاسمٍ ظاهر', correct: true },
+          { text: 'فعلٌ مضارعٌ من الأفعالِ الخمسة متصلٌ بواوِ الجماعة', correct: false },
+          { text: 'حرفُ جرٍّ يفيدُ الملكيةَ ويُبنى على السكون', correct: false },
+          { text: 'فعلُ أمرٍ ناقصٌ يدلُّ على الاتصافِ بالعلم', correct: false }
+        ],
+        hint: 'ابدأ بالاسم «ذُو» (بمعنى صاحب) ثم أضفه إلى «العِلْمِ» لتكتمل الجملة الاسمية!'
+      }
+    ]
+  },
+  {
+    id: 2,
+    title: 'قلعة التمييز والتحدي',
+    theme: 'castle',
+    skyTop: '#1e1b4b',
+    skyBottom: '#4c1d95',
+    groundTop: '#64748b',
+    groundFill: '#1e293b',
+    hint: 'فرّق بدقة: الأفعال الخمسة أفعال مضارعة (تدرسان)، أما الأسماء الخمسة فأسماء مضافة (فوك، حموك).',
+    levelWidth: 3750,
+    checkpoints: [
+      {
+        id: 's3_cp1',
+        x: 1520,
+        type: 'classify',
+        badgeKey: 'alif',
+        question: 'صنّف الكلمات الأربع التالية في السلتين المناسبتين:',
+        items: [
+          { text: 'يَلْعَبَانِ', category: 'verbs5' },
+          { text: 'فُوكَ', category: 'nouns5' },
+          { text: 'تَجْتَهِدِينَ', category: 'verbs5' },
+          { text: 'أَخُوهُ', category: 'nouns5' }
+        ],
+        evidenceQuestion: 'ما الدليل النحوي الذي يميّز «يَلْعَبَانِ» عن «أَخُوهُ»؟',
+        evidenceOptions: [
+          { text: '«يَلْعَبَانِ» فعلٌ مضارعٌ بألفِ الاثنين، و«أَخُوهُ» اسمٌ مضافٌ لضمير', correct: true },
+          { text: 'كلاهما اسمٌ معربٌ من الأسماءِ الخمسة المرفوعة بالواو', correct: false },
+          { text: 'كلاهما فعلٌ مضارعٌ من الأفعالِ الخمسة متصلٌ بالواو', correct: false },
+          { text: '«يَلْعَبَانِ» اسمٌ مثنًّى مرفوع، و«أَخُوهُ» فعلٌ ماضٍ مبني', correct: false }
+        ],
+        hint: 'تذكّر: الأفعال تدل على حدث (يلعبان، تجتهدين)، أما الأسماء الخمسة فتدل على أشخاص أو أشياء (فوك، أخوه).'
+      },
+      {
+        id: 's3_cp2',
+        x: 3250,
+        type: 'mcq',
+        badgeKey: 'alif',
+        question: 'أكمل الجملة بالفعل المناسب: (التلميذانِ المجتهدانِ ......... على التفوقِ).',
+        options: [
+          { text: 'يَحْرِصَانِ على التفوق', correct: true },
+          { text: 'يَحْرِصُونَ على التفوق', correct: false },
+          { text: 'تَحْرِصِينَ على التفوق', correct: false },
+          { text: 'حَرَصَا على التفوق', correct: false }
+        ],
+        evidenceQuestion: 'لماذا اخترت «يَحْرِصَانِ»؟',
+        evidenceOptions: [
+          { text: 'لأنه فعلٌ مضارعٌ اتصلت به ألفُ الاثنين ليناسبَ المثنى', correct: true },
+          { text: 'لأنه اسمٌ من الأسماءِ الخمسة مرفوعٌ بالألفِ نيابةً عن الضمة', correct: false },
+          { text: 'لأنه فعلٌ مضارعٌ اتصلت بآخره ياءُ المخاطبة المؤنثة', correct: false },
+          { text: 'لأنه فعلٌ ماضٍ مبنيٌّ على الفتحِ لاتصاله بألفِ الاثنين', correct: false }
+        ],
+        hint: 'الفاعل «التلميذان» مثنى (اثنان)، لذا نحتاج إلى الفعل المضارع المتصل بألف الاثنين!'
+      }
+    ]
+  },
+  {
+    id: 3,
+    title: 'مملكة السماء النهائية',
+    theme: 'sky',
+    skyTop: '#0369a1',
+    skyBottom: '#bae6fd',
+    groundTop: '#f8fafc',
+    groundFill: '#cbd5e1',
+    hint: 'أنت الآن في التحدي الملكي! اجمع بين معرفتك بالأفعال الخمسة والأسماء الخمسة لتحرير المملكة.',
+    levelWidth: 3750,
+    checkpoints: [
+      {
+        id: 's4_cp1',
+        x: 1520,
+        type: 'order',
+        badgeKey: 'champion',
+        question: 'رتّب الكلمات لتكوّن جملة صحيحة: (أَخَاكَ - يُسَاعِدُونَ - الأَصْدِقَاءُ - الأَوْفِيَاءُ)',
+        words: ['أَخَاكَ', 'يُسَاعِدُونَ', 'الأَصْدِقَاءُ', 'الأَوْفِيَاءُ'],
+        correctOrder: ['الأَصْدِقَاءُ', 'الأَوْفِيَاءُ', 'يُسَاعِدُونَ', 'أَخَاكَ'],
+        evidenceQuestion: 'ما التحليل النحوي الصحيح لكلمتَي «يُسَاعِدُونَ» و«أَخَاكَ»؟',
+        evidenceOptions: [
+          { text: '«يُسَاعِدُونَ» من الأفعالِ الخمسة، و«أَخَاكَ» من الأسماءِ الخمسة', correct: true },
+          { text: 'الكلمتان معاً من الأفعالِ الخمسة المرفوعة بثبوتِ النون', correct: false },
+          { text: 'الكلمتان معاً من الأسماءِ الخمسة المضافة إلى ضميرٍ ظاهر', correct: false },
+          { text: '«يُسَاعِدُونَ» جمعُ مذكرٍ سالم، و«أَخَاكَ» فعلٌ مضارعٌ منصوب', correct: false }
+        ],
+        hint: 'ابدأ بالمبتدأ «الأَصْدِقَاءُ الأَوْفِيَاءُ»، ثم الفعل «يُسَاعِدُونَ»، ثم المفعول به «أَخَاكَ».'
+      },
+      {
+        id: 's4_cp2',
+        x: 3250,
+        type: 'classify',
+        badgeKey: 'champion',
+        question: 'التحدي الملكي الأخير! صنّف الكلمات بدقة إلى أفعال خمسة وأسماء خمسة:',
+        items: [
+          { text: 'حَمُوكَ', category: 'nouns5' },
+          { text: 'تُشَارِكُونَ', category: 'verbs5' },
+          { text: 'ذُو مَالٍ', category: 'nouns5' },
+          { text: 'تَكْتُبَانِ', category: 'verbs5' }
+        ],
+        evidenceQuestion: 'اختر القاعدة الذهبية الجامعة للتمييز بينهما:',
+        evidenceOptions: [
+          { text: 'الأفعالُ الخمسة أفعالٌ مضارعةٌ بضمير، والأسماءُ الخمسة أسماءٌ مفردةٌ مضافة', correct: true },
+          { text: 'الأسماءُ الخمسة أفعالٌ ماضيةٌ مبنية، والأفعالُ الخمسة حروفُ جرٍّ عاملة', correct: false },
+          { text: 'كلاهما اسمٌ معربٌ يُرفعُ بالضمة الظاهرة على آخره في جميعِ الأحوال', correct: false },
+          { text: 'الأفعالُ الخمسة تُجرُّ بالكسرة، والأسماءُ الخمسة تُجزمُ بحذفِ حرفِ العلة', correct: false }
+        ],
+        hint: 'انظر للكلمات التي تدل على عمل وحركة (تشاركون، تكتبان) فهي أفعال خمسة، والتي تدل على صفة أو قرابة مضافة (حموك، ذو مال) فهي أسماء خمسة.'
+      }
+    ]
+  }
+];
+
+const BADGES_INFO = [
+  { key: 'waw', title: 'وسام واو الجماعة', desc: 'إتقان الأفعال الخمسة المتصلة بواو الجماعة', icon: '🌟' },
+  { key: 'yaa', title: 'وسام ياء المخاطبة', desc: 'إتقان الأفعال الخمسة المتصلة بياء المخاطبة', icon: '💎' },
+  { key: 'alif', title: 'وسام ألف الاثنين', desc: 'إتقان الأفعال الخمسة المتصلة بألف الاثنين', icon: '⚡' },
+  { key: 'nouns5', title: 'وسام الأسماء الخمسة', desc: 'إتقان تمييز الأسماء الخمسة وإضافتها', icon: '📜' },
+  { key: 'champion', title: 'بطل مملكة النحو', desc: 'اجتياز تحديات المملكة الملكية بنجاح', icon: '👑' }
+];
+
+// ============================================================================
+// 3. حالة اللعبة العامة (GameState)
+// ============================================================================
+const Keys = { left: false, right: false, up: false, down: false };
+
+const GameState = {
+  VIEW_W: 960,
+  VIEW_H: 540,
+  started: false,
+  paused: false,
+  currentStageIdx: 0,
+  inBonusRoom: false,
+  score: 0,
+  coins: 0,
+  lives: 3,
+  difficulty: 'beginner', // 'beginner' | 'advanced'
+  timerEnabled: true,
+  fontSizeIndex: 0,
+  cameraX: 0,
+  passedCheckpoints: {},
+  unlockedBadges: {},
+  activeCheckpoint: null,
+  timerInterval: null,
+  timeLeft: 20,
+
+  player: {
+    x: 90,
+    y: 360,
+    w: 36,
+    h: 46,
+    vx: 0,
+    vy: 0,
+    facing: 1,
+    onGround: false,
+    power: 'small', // 'small' | 'super' | 'fire'
+    invulnTimer: 0,
+    isDying: false,
+    deathTimer: 0,
+    deathCause: null,
+    animFrame: 0,
+    lastJumpTime: 0,
+    doubleJumpUsed: false,
+    safeX: 90,
+    safeY: 360
+  },
+
+  platforms: [],
+  blocks: [],
+  pipes: [],
+  coinsList: [],
+  enemies: [],
+  powerups: [],
+  fireballs: [],
+  particles: [],
+  floatingTexts: [],
+  goalFlag: {
+    x: 3560,
+    y: 240,
+    w: 44,
+    h: 220,
+    flagOffsetY: 12,
+    lowering: false,
+    lowered: false
+  },
+
+  // حفظ حالة المرحلة الرئيسية أثناء دخول غرفة المكافآت السرية
+  savedMainWorld: null
+};
+
+// دالة خلط المصفوفة عشوائياً (Fisher-Yates Shuffle) لضمان توزيع متساوٍ في كل عرض
+function shuffleArray(array) {
+  const copy = [...array];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+// ============================================================================
+// 4. بناء المراحل وغرف المكافآت بمسافات مريحة وآمنة
+// ============================================================================
+function buildStage(stageIdx) {
+  GameState.currentStageIdx = stageIdx;
+  GameState.inBonusRoom = false;
+  GameState.savedMainWorld = null;
+  GameState.cameraX = 0;
+  GameState.fireballs = [];
+  GameState.powerups = [];
+  GameState.particles = [];
+  GameState.floatingTexts = [];
+
+  const stage = STAGES_DATA[stageIdx];
+  document.getElementById('stage-selector').value = String(stageIdx);
+  document.getElementById('stage-hint-text').textContent = stage.hint;
+
+  // الأرضيات مع فجوات مدروسة ومنصات معلقة متدرجة الارتفاع (درجات سلم هوائية)
+  GameState.platforms = [
+    { x: 0,    y: 460, w: 900,  h: 90, isGround: true },
+    // حفرة 1: 900 -> 990
+    { x: 990,  y: 460, w: 860,  h: 90, isGround: true },
+    // حفرة 2: 1850 -> 1945
+    { x: 1945, y: 460, w: 720,  h: 90, isGround: true },
+    // حفرة 3: 2665 -> 2765
+    { x: 2765, y: 460, w: 1020, h: 90, isGround: true },
+
+    // مجموعة منصات متدرجة 1 (منخفضة -> متوسطة -> مرتفعة) في متناول القفز العادي والعالي
+    { x: 270,  y: 365, w: 130, h: 22, isGround: false },
+    { x: 425,  y: 295, w: 135, h: 22, isGround: false },
+
+    // مجموعة منصات متدرجة 2
+    { x: 1060, y: 365, w: 135, h: 22, isGround: false },
+    { x: 1225, y: 295, w: 135, h: 22, isGround: false },
+    { x: 1385, y: 230, w: 120, h: 22, isGround: false },
+
+    // منصة متوسطة قبل الحفرة الثانية
+    { x: 1665, y: 350, w: 145, h: 22, isGround: false },
+
+    // مجموعة منصات متدرجة 3
+    { x: 2260, y: 365, w: 135, h: 22, isGround: false },
+    { x: 2425, y: 290, w: 140, h: 22, isGround: false },
+
+    // مجموعة منصات متدرجة 4 قبل التحدي النهائي
+    { x: 2850, y: 365, w: 135, h: 22, isGround: false },
+    { x: 3015, y: 295, w: 145, h: 22, isGround: false }
+  ];
+
+  // كتل الاستفهام (؟) موزعة فوق المنصات والمسار الأرضي
+  GameState.blocks = [
+    { x: 215,  y: 345, w: 40, h: 40, type: 'question', reward: 'coin', used: false, bumpY: 0 },
+    { x: 472,  y: 185, w: 40, h: 40, type: 'question', reward: 'mushroom', used: false, bumpY: 0 },
+    { x: 1010, y: 345, w: 40, h: 40, type: 'question', reward: 'coin', used: false, bumpY: 0 },
+    { x: 1272, y: 185, w: 40, h: 40, type: 'question', reward: 'fire', used: false, bumpY: 0 },
+    { x: 1715, y: 235, w: 40, h: 40, type: 'question', reward: 'coin', used: false, bumpY: 0 },
+    { x: 2475, y: 180, w: 40, h: 40, type: 'question', reward: 'mushroom', used: false, bumpY: 0 },
+    { x: 3065, y: 185, w: 40, h: 40, type: 'question', reward: 'fire', used: false, bumpY: 0 }
+  ];
+
+  // المواسير الخضراء (مع مساحة خروج مفتوحة تماماً بعدها)
+  GameState.pipes = [
+    { x: 620,  y: 382, w: 68, h: 78, hasSecret: true,  exitX: 740 },
+    { x: 2060, y: 374, w: 68, h: 86, hasSecret: false, exitX: 2170 }
+  ];
+
+  // العملات الذهبية موزعة على المنصات المنخفضة والمتوسطة والمرتفعة لتشجيع الاكتشاف
+  GameState.coinsList = [];
+  const coinArcs = [
+    { x: 290,  y: 328, count: 3 },
+    { x: 445,  y: 258, count: 3 },
+    { x: 750,  y: 418, count: 3 },
+    { x: 1080, y: 328, count: 3 },
+    { x: 1245, y: 258, count: 3 },
+    { x: 1405, y: 192, count: 3 },
+    { x: 1685, y: 312, count: 3 },
+    { x: 2280, y: 328, count: 3 },
+    { x: 2445, y: 252, count: 3 },
+    { x: 2870, y: 328, count: 3 },
+    { x: 3035, y: 258, count: 3 }
+  ];
+  coinArcs.forEach(c => {
+    for (let i = 0; i < c.count; i++) {
+      GameState.coinsList.push({ x: c.x + i * 36, y: c.y, collected: false, bob: i * 0.6 });
+    }
+  });
+
+  // الأعداء المتنوعون حسب تقدم المراحل (وحوش بأرجل متحركة، سلاحف ذات صدفة، ووحوش قافزة)
+  const cp1X = stage.checkpoints[0].x;
+  const cp2X = stage.checkpoints[1].x;
+
+  const stageEnemyBlueprints = [
+    // المرحلة 1: وحوش الفطر + سلحفاة خضراء للتدريب على الصدفة
+    [
+      { kind: 'goomba', x: 340, minX: 200, maxX: 540 },
+      { kind: 'goomba', x: 1120, minX: 1010, maxX: 1380 },
+      { kind: 'turtle', color: 'green', x: cp1X + 160, minX: cp1X + 80, maxX: 1830 },
+      { kind: 'goomba', x: 2320, minX: 2160, maxX: 2630 }
+    ],
+    // المرحلة 2: سلاحف إضافية ووحش قافز
+    [
+      { kind: 'goomba', x: 340, minX: 200, maxX: 540 },
+      { kind: 'turtle', color: 'green', x: 1080, minX: 1010, maxX: 1380 },
+      { kind: 'turtle', color: 'green', x: cp1X + 140, minX: cp1X + 80, maxX: 1830 },
+      { kind: 'hopper', x: 1750, minX: cp1X + 80, maxX: 1830 },
+      { kind: 'turtle', color: 'green', x: 2260, minX: 2160, maxX: 2630 },
+      { kind: 'goomba', x: 2490, minX: 2160, maxX: 2630 }
+    ],
+    // المرحلة 3: سلاحف حمراء وخضراء + وحوش قافزة
+    [
+      { kind: 'turtle', color: 'red', x: 300, minX: 200, maxX: 540 },
+      { kind: 'goomba', x: 450, minX: 200, maxX: 540 },
+      { kind: 'hopper', x: 1120, minX: 1010, maxX: 1380 },
+      { kind: 'turtle', color: 'red', x: cp1X + 130, minX: cp1X + 80, maxX: 1830 },
+      { kind: 'hopper', x: 1760, minX: cp1X + 80, maxX: 1830 },
+      { kind: 'turtle', color: 'green', x: 2250, minX: 2160, maxX: 2630 },
+      { kind: 'goomba', x: 2510, minX: 2160, maxX: 2630 },
+      { kind: 'hopper', x: 2980, minX: 2800, maxX: cp2X - 70 }
+    ],
+    // المرحلة 4: تشكيلة كاملة من الوحوش المتنوعة
+    [
+      { kind: 'turtle', color: 'red', x: 290, minX: 200, maxX: 540 },
+      { kind: 'hopper', x: 450, minX: 200, maxX: 540 },
+      { kind: 'turtle', color: 'green', x: 1060, minX: 1010, maxX: 1380 },
+      { kind: 'goomba', x: 1260, minX: 1010, maxX: 1380 },
+      { kind: 'turtle', color: 'red', x: cp1X + 120, minX: cp1X + 80, maxX: 1830 },
+      { kind: 'hopper', x: 1750, minX: cp1X + 80, maxX: 1830 },
+      { kind: 'turtle', color: 'red', x: 2240, minX: 2160, maxX: 2630 },
+      { kind: 'hopper', x: 2500, minX: 2160, maxX: 2630 },
+      { kind: 'turtle', color: 'green', x: 2880, minX: 2800, maxX: cp2X - 70 },
+      { kind: 'goomba', x: 3080, minX: 2800, maxX: cp2X - 70 }
+    ]
+  ];
+
+  GameState.enemies = [];
+  const blueprints = stageEnemyBlueprints[stageIdx] || stageEnemyBlueprints[0];
+  blueprints.forEach((ep, idx) => {
+    const kind = ep.kind || 'goomba';
+    const baseH = kind === 'turtle' ? 44 : (kind === 'hopper' ? 40 : 38);
+    const baseY = 460 - baseH;
+    const initVx = (idx % 2 === 0 ? -1.45 : 1.45);
+    GameState.enemies.push({
+      kind,
+      shellColor: ep.color || 'green',
+      state: 'walk', // 'walk' | 'shell_idle' | 'shell_slide'
+      x: ep.x,
+      y: baseY,
+      w: 38,
+      h: baseH,
+      initialX: ep.x,
+      initialY: baseY,
+      initialH: baseH,
+      initialVx: initVx,
+      vx: initVx,
+      vy: 0,
+      minX: ep.minX,
+      maxX: ep.maxX,
+      alive: true,
+      walkAnim: idx * 1.1,
+      hopTimer: 45 + (idx * 20) % 50,
+      shellGraceTimer: 0,
+      shellRecoverTimer: 0
+    });
+  });
+
+  GameState.goalFlag = {
+    x: 3560,
+    y: 240,
+    w: 44,
+    h: 220,
+    flagOffsetY: 12,
+    lowering: false,
+    lowered: false
+  };
+  resetPlayerPosition(90, 460 - GameState.player.h);
+  updateHUD();
+}
+
+// إعادة إحياء جميع الوحوش عند العودة لنقطة التفتيش
+function respawnAllEnemies() {
+  GameState.enemies.forEach(en => {
+    en.alive = true;
+    en.state = 'walk';
+    en.x = en.initialX;
+    en.y = en.initialY;
+    en.h = en.initialH;
+    en.vx = en.initialVx;
+    en.vy = 0;
+    en.shellGraceTimer = 0;
+    en.shellRecoverTimer = 0;
+  });
+}
+
+function resetPlayerPosition(x, y) {
+  const p = GameState.player;
+  p.x = x;
+  p.y = y;
+  p.vx = 0;
+  p.vy = 0;
+  p.onGround = false;
+  p.isDying = false;
+  p.deathTimer = 0;
+  p.deathCause = null;
+  p.doubleJumpUsed = false;
+}
+
+// الحصول على إحداثيات آخر نقطة تفتيش اجتازها اللاعب في المرحلة الحالية
+function getLatestPassedCheckpointPos() {
+  const stage = STAGES_DATA[GameState.currentStageIdx];
+  let latestCp = null;
+  for (const cp of stage.checkpoints) {
+    if (GameState.passedCheckpoints[cp.id]) {
+      latestCp = cp;
+    }
+  }
+  if (latestCp) {
+    return { x: latestCp.x + 55, y: 460 - GameState.player.h };
+  }
+  return { x: 90, y: 460 - GameState.player.h };
+}
+
+// الحصول على نقطة التفتيش السابقة لنقطة تفتيش محددة (عند الإجابة الخاطئة)
+function getPreviousCheckpointPos(currentCpId) {
+  const stage = STAGES_DATA[GameState.currentStageIdx];
+  const idx = stage.checkpoints.findIndex(c => c.id === currentCpId);
+  if (idx > 0) {
+    const prevCp = stage.checkpoints[idx - 1];
+    if (GameState.passedCheckpoints[prevCp.id]) {
+      return { x: prevCp.x + 55, y: 460 - GameState.player.h, label: 'نقطة التفتيش السابقة' };
+    }
+  }
+  return { x: 90, y: 460 - GameState.player.h, label: 'بداية المرحلة' };
+}
+
+// ============================================================================
+// 5. غرفة المكافآت السرية عبر المواسير الخضراء
+// ============================================================================
+function enterBonusRoom(pipe) {
+  if (GameState.inBonusRoom) return;
+  SoundEngine.pipe();
+  GameState.savedMainWorld = {
+    platforms: GameState.platforms,
+    blocks: GameState.blocks,
+    pipes: GameState.pipes,
+    coinsList: GameState.coinsList,
+    enemies: GameState.enemies,
+    powerups: GameState.powerups,
+    cameraX: GameState.cameraX,
+    returnX: pipe.exitX || (pipe.x + pipe.w + 45),
+    returnY: 460 - GameState.player.h
+  };
+
+  GameState.inBonusRoom = true;
+  GameState.cameraX = 0;
+  GameState.enemies = [];
+  GameState.fireballs = [];
+  GameState.powerups = [];
+
+  GameState.platforms = [
+    { x: 0, y: 460, w: 960, h: 90, isGround: true },
+    { x: 240, y: 335, w: 280, h: 24, isGround: false }
+  ];
+
+  GameState.blocks = [
+    { x: 360, y: 215, w: 42, h: 42, type: 'question', reward: 'fire', used: false, bumpY: 0 }
+  ];
+
+  GameState.pipes = [
+    { x: 780, y: 375, w: 72, h: 85, isBonusExit: true }
+  ];
+
+  GameState.coinsList = [];
+  for (let i = 0; i < 8; i++) {
+    GameState.coinsList.push({ x: 220 + i * 52, y: 410, collected: false, bob: i * 0.4 });
+  }
+  for (let i = 0; i < 5; i++) {
+    GameState.coinsList.push({ x: 265 + i * 50, y: 290, collected: false, bob: i * 0.5 });
+  }
+
+  resetPlayerPosition(110, 460 - GameState.player.h);
+  showToast('🟢', 'دخلت غرفة الكنوز السرية! اجمع العملات ثم انزل في ماسورة الخروج.');
+}
+
+function exitBonusRoom() {
+  if (!GameState.inBonusRoom || !GameState.savedMainWorld) return;
+  SoundEngine.pipe();
+  const saved = GameState.savedMainWorld;
+  GameState.platforms = saved.platforms;
+  GameState.blocks = saved.blocks;
+  GameState.pipes = saved.pipes;
+  GameState.coinsList = saved.coinsList;
+  GameState.enemies = saved.enemies;
+  GameState.powerups = saved.powerups;
+  GameState.inBonusRoom = false;
+  GameState.savedMainWorld = null;
+
+  resetPlayerPosition(saved.returnX, saved.returnY);
+  GameState.cameraX = Math.max(0, saved.returnX - 240);
+  showToast('✨', 'عدت إلى المغامرة الرئيسية بأمان!');
+}
+
+// ============================================================================
+// 6. الفيزياء وحركة اللاعب والوحوش والقدرات
+// ============================================================================
+function rectsOverlap(a, b) {
+  return (
+    a.x < b.x + b.w &&
+    a.x + a.w > b.x &&
+    a.y < b.y + b.h &&
+    a.y + a.h > b.y
+  );
+}
+
+function setPlayerPower(newPower) {
+  const p = GameState.player;
+  const bottom = p.y + p.h;
+  p.power = newPower;
+  if (newPower === 'small') {
+    p.w = 36;
+    p.h = 46;
+  } else {
+    p.w = 42;
+    p.h = 58;
+  }
+  p.y = bottom - p.h;
+  updateHUD();
+}
+
+function triggerPlayerDeath(cause) {
+  const p = GameState.player;
+  if (p.isDying) return;
+  p.isDying = true;
+  p.deathTimer = 95;
+  p.deathCause = cause;
+  p.vx = 0;
+  p.vy = -11.5;
+  SoundEngine.marioDeath();
+}
+
+function completePlayerDeath() {
+  const p = GameState.player;
+  p.isDying = false;
+  setPlayerPower('small');
+  GameState.lives = Math.max(0, GameState.lives - 1);
+  updateHUD();
+
+  if (GameState.lives <= 0) {
+    GameState.paused = true;
+    document.getElementById('game-over-modal').classList.remove('hidden');
+    return;
+  }
+
+  if (GameState.inBonusRoom) {
+    exitBonusRoom();
+  }
+
+  const respawn = getLatestPassedCheckpointPos();
+  resetPlayerPosition(respawn.x, respawn.y);
+  p.invulnTimer = 85;
+  respawnAllEnemies();
+  showToast('🚩', `تبقت لك ${GameState.lives} محاولات! عدت إلى أقرب نقطة تفتيش.`);
+}
+
+function shootFireball() {
+  if (!GameState.started || GameState.paused) return;
+  const p = GameState.player;
+  if (p.isDying) return;
+  if (p.power !== 'fire') {
+    showToast('🔥', 'تحتاج إلى (فطر اللهب النحوي) لإطلاق كرات النار!');
+    return;
+  }
+  if (GameState.fireballs.length >= 2) return;
+  SoundEngine.fireball();
+  GameState.fireballs.push({
+    x: p.facing === 1 ? p.x + p.w : p.x - 14,
+    y: p.y + 22,
+    w: 14,
+    h: 14,
+    vx: p.facing * 8.5,
+    vy: 1.5,
+    life: 95
+  });
+}
+
+// القفز العادي أو القفزة الأعلى عند الضغط المرتين المتتاليتين سريعاً
+function triggerJumpPress() {
+  if (!GameState.started || GameState.paused) return;
+  const p = GameState.player;
+  if (p.isDying) return;
+
+  const now = performance.now();
+  if (p.onGround) {
+    p.vy = -12.3;
+    p.onGround = false;
+    p.lastJumpTime = now;
+    p.doubleJumpUsed = false;
+    SoundEngine.jump();
+    spawnParticles(p.x + p.w / 2, p.y + p.h, '#ffffff', 5);
+  } else if (!p.doubleJumpUsed && (now - p.lastJumpTime) <= 340) {
+    p.vy = -16.2;
+    p.doubleJumpUsed = true;
+    SoundEngine.highJump();
+    spawnParticles(p.x + p.w / 2, p.y + p.h, '#fde047', 10);
+    addFloatingText(p.x + p.w / 2, p.y - 8, 'قفزة عالية! ⬆️', '#fef08a');
+  }
+}
+
+function hitBlock(b) {
+  if (b.used) {
+    SoundEngine.blockHit();
+    b.bumpY = -6;
+    return;
+  }
+  b.used = true;
+  b.bumpY = -10;
+  SoundEngine.blockHit();
+
+  if (b.reward === 'coin') {
+    GameState.coins += 1;
+    GameState.score += 25;
+    SoundEngine.coin();
+    spawnParticles(b.x + 20, b.y, '#facc15', 10);
+    addFloatingText(b.x + 20, b.y - 12, '+25 🪙', '#fde047');
+    updateHUD();
+  } else if (b.reward === 'mushroom' || b.reward === 'fire') {
+    SoundEngine.powerupSprout();
+    GameState.powerups.push({
+      kind: b.reward,
+      x: b.x + 4,
+      y: b.y - 34,
+      w: 32,
+      h: 32,
+      vx: 1.6,
+      vy: 0
+    });
+  }
+}
+
+function updatePhysics() {
+  if (!GameState.started || GameState.paused) return;
+  const p = GameState.player;
+
+  // حركة السقوط الخاصة بموت ماريو
+  if (p.isDying) {
+    p.deathTimer--;
+    if (p.deathTimer < 78) {
+      p.vy += 0.55;
+      p.y += p.vy;
+    }
+    if (p.deathTimer <= 0) {
+      completePlayerDeath();
+    }
+    return;
+  }
+
+  const stage = STAGES_DATA[GameState.currentStageIdx];
+  const worldWidth = GameState.inBonusRoom ? GameState.VIEW_W : stage.levelWidth;
+  const speedMult = GameState.difficulty === 'beginner' ? 0.94 : 1.08;
+  const moveSpeed = 4.6 * speedMult;
+  const gravity = GameState.difficulty === 'beginner' ? 0.54 : 0.6;
+
+  if (p.invulnTimer > 0) p.invulnTimer--;
+
+  // الحركة الأفقية
+  if (Keys.left) {
+    p.vx = -moveSpeed;
+    p.facing = -1;
+    p.animFrame += 0.22;
+  } else if (Keys.right) {
+    p.vx = moveSpeed;
+    p.facing = 1;
+    p.animFrame += 0.22;
+  } else {
+    p.vx *= 0.78;
+    if (Math.abs(p.vx) < 0.1) p.vx = 0;
+    p.animFrame = 0;
+  }
+
+  // الجاذبية
+  p.vy += gravity;
+  if (p.vy > 14) p.vy = 14;
+
+  // التحرك الأفقي وحل التصادمات الجانبية
+  p.x += p.vx;
+  if (p.x < 10) p.x = 10;
+  if (p.x + p.w > worldWidth - 10) p.x = worldWidth - 10 - p.w;
+
+  for (const pipe of GameState.pipes) {
+    if (rectsOverlap(p, pipe)) {
+      if (p.vx > 0) p.x = pipe.x - p.w;
+      else if (p.vx < 0) p.x = pipe.x + pipe.w;
+      p.vx = 0;
+    }
+  }
+
+  for (const b of GameState.blocks) {
+    if (rectsOverlap(p, b)) {
+      if (p.vx > 0) p.x = b.x - p.w;
+      else if (p.vx < 0) p.x = b.x + b.w;
+      p.vx = 0;
+    }
+  }
+
+  // التحرك الرأسي وحل التصادمات العمودية
+  p.y += p.vy;
+  p.onGround = false;
+
+  for (const plat of GameState.platforms) {
+    if (rectsOverlap(p, plat)) {
+      if (p.vy > 0 && p.y + p.h - p.vy <= plat.y + 16) {
+        p.y = plat.y - p.h;
+        p.vy = 0;
+        p.onGround = true;
+      } else if (!plat.isGround && p.vy < 0 && p.y - p.vy >= plat.y + plat.h - 12) {
+        p.y = plat.y + plat.h;
+        p.vy = 0;
+      }
+    }
+  }
+
+  for (const b of GameState.blocks) {
+    if (b.bumpY < 0) b.bumpY += 1.5;
+    if (b.bumpY > 0) b.bumpY = 0;
+
+    if (rectsOverlap(p, b)) {
+      if (p.vy > 0 && p.y + p.h - p.vy <= b.y + 16) {
+        p.y = b.y - p.h;
+        p.vy = 0;
+        p.onGround = true;
+      } else if (p.vy < 0 && p.y - p.vy >= b.y + b.h - 14) {
+        p.y = b.y + b.h;
+        p.vy = 1;
+        hitBlock(b);
+      }
+    }
+  }
+
+  // الوقوف فوق المواسير والدخول فيها
+  for (const pipe of GameState.pipes) {
+    if (rectsOverlap(p, pipe) && p.vy >= 0 && p.y + p.h - p.vy <= pipe.y + 16) {
+      p.y = pipe.y - p.h;
+      p.vy = 0;
+      p.onGround = true;
+
+      if (Keys.down) {
+        if (pipe.hasSecret && !GameState.inBonusRoom) {
+          Keys.down = false;
+          enterBonusRoom(pipe);
+          return;
+        } else if (pipe.isBonusExit && GameState.inBonusRoom) {
+          Keys.down = false;
+          exitBonusRoom();
+          return;
+        }
+      }
+    }
+  }
+
+  // التحقق من السقوط في الحفر
+  if (p.y > GameState.VIEW_H + 40) {
+    if (GameState.inBonusRoom) {
+      exitBonusRoom();
+    } else {
+      triggerPlayerDeath('pit');
+    }
+    return;
+  }
+
+  // تحديث الكاميرا بسلاسة مع تثبيتها عند أقرب نقطة تفتيش غير محلولة لمنع التقدم
+  if (!GameState.inBonusRoom) {
+    let maxCamLimit = worldWidth - GameState.VIEW_W;
+    for (const cp of stage.checkpoints) {
+      if (!GameState.passedCheckpoints[cp.id]) {
+        // تثبيت الكاميرا بحيث تبقى نقطة التفتيش والحاجز الضوئي واضحين أمام اللاعب
+        maxCamLimit = Math.min(maxCamLimit, Math.max(0, cp.x - GameState.VIEW_W * 0.65));
+        break;
+      }
+    }
+
+    const targetCam = p.x - GameState.VIEW_W * 0.35;
+    GameState.cameraX += (targetCam - GameState.cameraX) * 0.14;
+    if (GameState.cameraX < 0) GameState.cameraX = 0;
+    if (GameState.cameraX > maxCamLimit) {
+      GameState.cameraX = maxCamLimit;
+    }
+  }
+
+  // جمع العملات الذهبية
+  for (const c of GameState.coinsList) {
+    if (!c.collected) {
+      c.bob += 0.08;
+      const coinBox = { x: c.x - 12, y: c.y - 12, w: 24, h: 24 };
+      if (rectsOverlap(p, coinBox)) {
+        c.collected = true;
+        GameState.coins += 1;
+        GameState.score += 15;
+        SoundEngine.coin();
+        spawnParticles(c.x, c.y, '#facc15', 7);
+        updateHUD();
+      }
+    }
+  }
+
+  // تحديث فطر القدرات (النمو واللهب)
+  for (let i = GameState.powerups.length - 1; i >= 0; i--) {
+    const pu = GameState.powerups[i];
+    pu.vy += 0.45;
+    pu.x += pu.vx;
+    pu.y += pu.vy;
+
+    for (const plat of GameState.platforms) {
+      if (rectsOverlap(pu, plat) && pu.vy > 0) {
+        pu.y = plat.y - pu.h;
+        pu.vy = 0;
+      }
+    }
+    for (const pipe of GameState.pipes) {
+      if (rectsOverlap(pu, pipe)) pu.vx *= -1;
+    }
+
+    if (rectsOverlap(p, pu)) {
+      SoundEngine.powerup();
+      GameState.score += 75;
+      if (pu.kind === 'mushroom') {
+        if (p.power === 'small') setPlayerPower('super');
+        showToast('🍄', 'حصلت على فطر النمو! حجم أكبر ودرع حماية إضافي.');
+      } else if (pu.kind === 'fire') {
+        setPlayerPower('fire');
+        showToast('🔥', 'حصلت على فطر اللهب النحوي! اضغط (Z أو 🔥) لإطلاق كرات النار.');
+      }
+      spawnParticles(pu.x + 16, pu.y + 16, '#fb7185', 14);
+      GameState.powerups.splice(i, 1);
+      updateHUD();
+      continue;
+    }
+
+    if (pu.y > GameState.VIEW_H + 50) {
+      GameState.powerups.splice(i, 1);
+    }
+  }
+
+  // تحديث كرات النار
+  for (let i = GameState.fireballs.length - 1; i >= 0; i--) {
+    const fb = GameState.fireballs[i];
+    fb.life--;
+    fb.vy += 0.45;
+    fb.x += fb.vx;
+    fb.y += fb.vy;
+
+    for (const plat of GameState.platforms) {
+      if (rectsOverlap(fb, plat) && fb.vy > 0) {
+        fb.y = plat.y - fb.h;
+        fb.vy = -6.5;
+      }
+    }
+
+    let hitWall = false;
+    for (const pipe of GameState.pipes) {
+      if (rectsOverlap(fb, pipe)) hitWall = true;
+    }
+    if (hitWall) {
+      spawnParticles(fb.x, fb.y, '#f97316', 6);
+      GameState.fireballs.splice(i, 1);
+      continue;
+    }
+
+    for (const en of GameState.enemies) {
+      if (en.alive && rectsOverlap(fb, en)) {
+        en.alive = false;
+        fb.life = 0;
+        GameState.score += 60;
+        SoundEngine.kick();
+        spawnParticles(en.x + 18, en.y + 18, '#f97316', 14);
+        addFloatingText(en.x, en.y - 10, '+60 🔥', '#fb923c');
+        updateHUD();
+        break;
+      }
+    }
+
+    if (fb.life <= 0 || fb.y > GameState.VIEW_H + 30) {
+      GameState.fireballs.splice(i, 1);
+    }
+  }
+
+  // تحديث الأعداء (وحوش الفطر بأرجل متحركة، السلاحف، والوحوش القافزة)
+  const enemySpeedMult = GameState.difficulty === 'beginner' ? 0.78 : 1.15;
+  for (const en of GameState.enemies) {
+    if (!en.alive) continue;
+    if (en.shellGraceTimer > 0) en.shellGraceTimer--;
+
+    // 1. السلحفاة المنزلقة داخل صدفتها
+    if (en.kind === 'turtle' && en.state === 'shell_slide') {
+      en.walkAnim += 0.55;
+      en.vy += 0.55;
+      if (en.vy > 14) en.vy = 14;
+      en.x += en.vx;
+
+      if (en.x < 10) {
+        en.x = 10;
+        en.vx = Math.abs(en.vx);
+      } else if (en.x + en.w > worldWidth - 10) {
+        en.x = worldWidth - 10 - en.w;
+        en.vx = -Math.abs(en.vx);
+      }
+      for (const pipe of GameState.pipes) {
+        if (rectsOverlap(en, pipe)) {
+          if (en.vx > 0) en.x = pipe.x - en.w;
+          else en.x = pipe.x + pipe.w;
+          en.vx *= -1;
+          SoundEngine.blockHit();
+        }
+      }
+      for (const b of GameState.blocks) {
+        if (rectsOverlap(en, b)) {
+          if (en.vx > 0) en.x = b.x - en.w;
+          else en.x = b.x + b.w;
+          en.vx *= -1;
+          SoundEngine.blockHit();
+        }
+      }
+
+      en.y += en.vy;
+      for (const plat of GameState.platforms) {
+        if (rectsOverlap(en, plat) && en.vy > 0 && en.y + en.h - en.vy <= plat.y + 16) {
+          en.y = plat.y - en.h;
+          en.vy = 0;
+        }
+      }
+
+      if (en.y > GameState.VIEW_H + 45) {
+        en.alive = false;
+        continue;
+      }
+
+      // القضاء على أي وحش آخر تصطدم به الصدفة المنزلقة
+      for (const other of GameState.enemies) {
+        if (other !== en && other.alive && rectsOverlap(en, other)) {
+          other.alive = false;
+          GameState.score += 100;
+          SoundEngine.kick();
+          spawnParticles(other.x + other.w / 2, other.y + other.h / 2, '#fbbf24', 12);
+          addFloatingText(other.x + other.w / 2, other.y - 10, '+100 💥', '#fde047');
+          updateHUD();
+        }
+      }
+    } else if (en.kind === 'turtle' && en.state === 'shell_idle') {
+      en.vy += 0.55;
+      en.y += en.vy;
+      for (const plat of GameState.platforms) {
+        if (rectsOverlap(en, plat) && en.vy > 0) {
+          en.y = plat.y - en.h;
+          en.vy = 0;
+        }
+      }
+
+      // إذا بقي الدرع دون لمس لمدة 3.5 ثوانٍ (210 إطارات)، تخرج السلحفاة وتعود للحركة الطبيعية
+      if (en.shellRecoverTimer > 0) {
+        en.shellRecoverTimer--;
+        if (en.shellRecoverTimer <= 0) {
+          en.state = 'walk';
+          const bottomY = en.y + en.h;
+          en.h = en.initialH;
+          en.y = bottomY - en.h;
+          en.vx = en.initialVx;
+          en.shellGraceTimer = 15;
+          spawnParticles(en.x + en.w / 2, en.y + en.h / 2, '#fde047', 6);
+        }
+      }
+    } else {
+      // 2. المشي العادي مع تحريك الأرجل الصغيرة
+      en.walkAnim += 0.25 * enemySpeedMult;
+      en.x += en.vx * enemySpeedMult;
+      if (en.x <= en.minX) {
+        en.x = en.minX;
+        en.vx = Math.abs(en.vx);
+      } else if (en.x + en.w >= en.maxX) {
+        en.x = en.maxX - en.w;
+        en.vx = -Math.abs(en.vx);
+      }
+
+      if (en.kind === 'hopper') {
+        en.hopTimer--;
+        if (en.hopTimer <= 0 && en.vy === 0) {
+          en.vy = -8.4;
+          en.hopTimer = GameState.difficulty === 'beginner' ? 75 : 52;
+        }
+        en.vy += 0.42;
+        en.y += en.vy;
+        for (const plat of GameState.platforms) {
+          if (rectsOverlap(en, plat) && en.vy > 0 && en.y + en.h - en.vy <= plat.y + 16) {
+            en.y = plat.y - en.h;
+            en.vy = 0;
+          }
+        }
+      }
+    }
+
+    // تصادم اللاعب مع العدو
+    if (rectsOverlap(p, en)) {
+      const stompedFromAbove = p.vy > 0 && (p.y + p.h - p.vy <= en.y + 20);
+
+      // دفع الصدفة الساكنة لتنزلق
+      if (en.kind === 'turtle' && en.state === 'shell_idle') {
+        if (en.shellGraceTimer <= 0) {
+          const kickDir = (p.x + p.w / 2) <= (en.x + en.w / 2) ? 1 : -1;
+          en.state = 'shell_slide';
+          en.vx = kickDir * 9.2;
+          en.shellGraceTimer = 14;
+          en.shellRecoverTimer = 0;
+          if (stompedFromAbove) p.vy = -8.5;
+          SoundEngine.kick();
+          spawnParticles(en.x + en.w / 2, en.y + en.h / 2, '#4ade80', 8);
+          addFloatingText(en.x + en.w / 2, en.y - 10, 'انزلاق! 🐢💨', '#86efac');
+        }
+        continue;
+      }
+
+      if (stompedFromAbove) {
+        p.vy = -9.5;
+        p.doubleJumpUsed = false;
+
+        if (en.kind === 'turtle' && en.state === 'walk') {
+          en.state = 'shell_idle';
+          en.vx = 0;
+          const bottomY = en.y + en.h;
+          en.h = 28;
+          en.y = bottomY - en.h;
+          en.shellGraceTimer = 14;
+          en.shellRecoverTimer = 210; // 3.5 ثوانٍ قبل أن تخرج السلحفاة من الدرع
+          GameState.score += 50;
+          SoundEngine.stomp();
+          spawnParticles(en.x + 19, en.y + 14, '#4ade80', 8);
+          addFloatingText(en.x + 19, en.y - 10, 'درع! 🐢', '#bbf7d0');
+          updateHUD();
+        } else if (en.kind === 'turtle' && en.state === 'shell_slide') {
+          en.state = 'shell_idle';
+          en.vx = 0;
+          en.shellGraceTimer = 14;
+          en.shellRecoverTimer = 210; // 3.5 ثوانٍ قبل أن تخرج السلحفاة من الدرع
+          SoundEngine.stomp();
+          addFloatingText(en.x + 19, en.y - 10, 'توقفت! 🛑', '#fef08a');
+        } else {
+          en.alive = false;
+          GameState.score += 50;
+          SoundEngine.stomp();
+          spawnParticles(en.x + 19, en.y + 19, '#a3e635', 10);
+          addFloatingText(en.x, en.y - 10, '+50 ⭐', '#bef264');
+          updateHUD();
+        }
+      } else if (p.invulnTimer <= 0 && en.shellGraceTimer <= 0) {
+        SoundEngine.wrong();
+        if (p.power === 'fire') {
+          p.invulnTimer = 85;
+          setPlayerPower('super');
+          showToast('🛡️', 'حماك درع النمو! لا تزال تملك حجماً كبيراً.');
+        } else if (p.power === 'super') {
+          p.invulnTimer = 85;
+          setPlayerPower('small');
+          showToast('🛡️', 'امتص درع الفطر الضربة! احذر من الضربة القادمة.');
+        } else {
+          triggerPlayerDeath('enemy');
+          return;
+        }
+      }
+    }
+  }
+
+  // التحقق من نقاط التفتيش (Checkpoints) وراية نهاية المرحلة
+  if (!GameState.inBonusRoom) {
+    for (const cp of stage.checkpoints) {
+      if (!GameState.passedCheckpoints[cp.id]) {
+        // 1. تغطية كامل الارتفاع الرأسي (-1000 إلى +1000) لمنع تجاوز نقطة التفتيش بالقفز العالي
+        const cpFullHeightZone = { x: cp.x - 10, y: -1000, w: 85, h: 2000 };
+
+        // 2. حاجز فيزيائي يمنع اللاعب من التقدم بعد نقطة التفتيش أو حدود الكاميرا
+        if (p.x + p.w > cp.x + 28) {
+          p.x = cp.x + 28 - p.w;
+          p.vx = 0;
+        }
+
+        // 3. تفعيل التحدي فوراً عند العبور مشياً أو قفزاً من الأعلى
+        if (rectsOverlap(p, cpFullHeightZone)) {
+          p.vx = 0;
+          Keys.left = Keys.right = Keys.up = Keys.down = false;
+          showToast('🚩', 'بوابة التحدي مغلقة! أجب عن السؤال النحوي لفتح الطريق.');
+          openCheckpointModal(cp);
+          return;
+        }
+      }
+    }
+
+    // التحقق من الوصول إلى راية نهاية المرحلة وإنزال العلم تدريجياً
+    const gf = GameState.goalFlag;
+    if (!gf.lowering && !gf.lowered && rectsOverlap(p, gf)) {
+      gf.lowering = true;
+      p.vx = 0;
+      Keys.left = Keys.right = Keys.up = Keys.down = false;
+      SoundEngine.stageClear();
+      spawnParticles(gf.x + 20, gf.y + gf.flagOffsetY, '#fbbf24', 18);
+    }
+
+    if (gf.lowering) {
+      p.vx = 0;
+      gf.flagOffsetY += 3.2;
+      if (gf.flagOffsetY >= gf.h - 46) {
+        gf.flagOffsetY = gf.h - 46;
+        gf.lowering = false;
+        gf.lowered = true;
+        completeStage();
+      }
+      return;
+    }
+  }
+
+  // تحديث الجسيمات والنصوص العائمة
+  for (let i = GameState.particles.length - 1; i >= 0; i--) {
+    const pt = GameState.particles[i];
+    pt.x += pt.vx;
+    pt.y += pt.vy;
+    pt.vy += 0.25;
+    pt.life--;
+    if (pt.life <= 0) GameState.particles.splice(i, 1);
+  }
+
+  for (let i = GameState.floatingTexts.length - 1; i >= 0; i--) {
+    const ft = GameState.floatingTexts[i];
+    ft.y -= 0.9;
+    ft.life--;
+    if (ft.life <= 0) GameState.floatingTexts.splice(i, 1);
+  }
+}
+
+function spawnParticles(x, y, color, count = 8) {
+  for (let i = 0; i < count; i++) {
+    GameState.particles.push({
+      x,
+      y,
+      vx: (Math.random() - 0.5) * 6,
+      vy: (Math.random() - 0.8) * 6,
+      color,
+      life: 24 + Math.random() * 14
+    });
+  }
+}
+
+function addFloatingText(x, y, text, color = '#ffffff') {
+  GameState.floatingTexts.push({ x, y, text, color, life: 42 });
+}
+
+// ============================================================================
+// 7. نظام التعلّم المدمج في نقاط التفتيش (Checkpoint Quiz + Grammatical Evidence)
+// ============================================================================
+function openCheckpointModal(cp) {
+  GameState.paused = true;
+  GameState.activeCheckpoint = cp;
+  Keys.left = Keys.right = Keys.up = Keys.down = false;
+  SoundEngine.checkpoint();
+
+  const modal = document.getElementById('checkpoint-modal');
+  const qText = document.getElementById('cp-question-text');
+  const area = document.getElementById('cp-interaction-area');
+  const evBox = document.getElementById('cp-evidence-box');
+  const fbBox = document.getElementById('cp-feedback-box');
+
+  qText.textContent = cp.question;
+  area.innerHTML = '';
+  evBox.classList.add('hidden');
+  fbBox.classList.add('hidden');
+
+  // المؤقت الزمني UDL
+  clearInterval(GameState.timerInterval);
+  const timerBox = document.getElementById('cp-timer-box');
+  if (GameState.timerEnabled) {
+    GameState.timeLeft = GameState.difficulty === 'beginner' ? 30 : 20;
+    document.getElementById('cp-timer-val').textContent = GameState.timeLeft;
+    timerBox.classList.remove('hidden');
+    GameState.timerInterval = setInterval(() => {
+      GameState.timeLeft--;
+      document.getElementById('cp-timer-val').textContent = GameState.timeLeft;
+      if (GameState.timeLeft <= 0) {
+        clearInterval(GameState.timerInterval);
+        handleCheckpointWrong(cp, 'انتهى الوقت المخصص للسؤال!');
+      }
+    }, 1000);
+  } else {
+    timerBox.classList.add('hidden');
+  }
+  // بناء واجهة التفاعل حسب نوع السؤال مع خلط الخيارات عشوائياً في كل مرة
+  if (cp.type === 'mcq') {
+    const grid = document.createElement('div');
+    grid.className = 'grid grid-cols-1 gap-2.5';
+    const shuffledOptions = shuffleArray(cp.options);
+    shuffledOptions.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'retro-btn q-opt-text arabic-grammar-text w-full bg-slate-800 hover:bg-indigo-700 border-2 border-slate-600 hover:border-amber-400 text-white font-bold py-3 px-4 rounded-2xl text-right cursor-pointer';
+      btn.textContent = opt.text;
+      btn.onclick = () => {
+        if (opt.correct) {
+          SoundEngine.coin();
+          showEvidenceStep(cp);
+        } else {
+          handleCheckpointWrong(cp, cp.hint);
+        }
+      };
+      grid.appendChild(btn);
+    });
+    area.appendChild(grid);
+  } else if (cp.type === 'order') {
+    let selectedWords = [];
+    const answerSlots = document.createElement('div');
+    answerSlots.className = 'min-h-[54px] bg-slate-950 border-2 border-dashed border-amber-400/70 rounded-2xl p-2.5 mb-3 flex flex-wrap items-center justify-center gap-2';
+
+    const wordBank = document.createElement('div');
+    wordBank.className = 'flex flex-wrap items-center justify-center gap-2 mb-3';
+
+    const renderOrderUI = () => {
+      answerSlots.innerHTML = '';
+      if (selectedWords.length === 0) {
+        answerSlots.innerHTML = '<span class="text-slate-500 text-sm">اضغط على الكلمات بالترتيب الصحيح...</span>';
+      } else {
+        selectedWords.forEach((w, idx) => {
+          const pill = document.createElement('button');
+          pill.type = 'button';
+          pill.className = 'q-opt-text arabic-grammar-text bg-amber-500 text-slate-950 font-black px-3.5 py-1.5 rounded-xl cursor-pointer';
+          pill.textContent = w;
+          pill.onclick = () => {
+            selectedWords.splice(idx, 1);
+            renderOrderUI();
+          };
+          answerSlots.appendChild(pill);
+        });
+      }
+
+      wordBank.innerHTML = '';
+      cp.words.forEach(w => {
+        const usedCount = selectedWords.filter(x => x === w).length;
+        const totalCount = cp.words.filter(x => x === w).length;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.disabled = usedCount >= totalCount;
+        btn.className = `retro-btn q-opt-text arabic-grammar-text px-4 py-2 rounded-xl font-bold border-2 cursor-pointer ${
+          btn.disabled
+            ? 'bg-slate-900 border-slate-800 text-slate-600 opacity-40 cursor-not-allowed'
+            : 'bg-slate-800 hover:bg-sky-700 border-slate-600 text-white'
+        }`;
+        btn.textContent = w;
+        btn.onclick = () => {
+          selectedWords.push(w);
+          renderOrderUI();
+        };
+        wordBank.appendChild(btn);
+      });
+    };
+
+    const checkBtn = document.createElement('button');
+    checkBtn.type = 'button';
+    checkBtn.className = 'retro-btn w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2.5 rounded-2xl cursor-pointer';
+    checkBtn.textContent = 'تحقّق من الترتيب ✓';
+    checkBtn.onclick = () => {
+      const isMatch =
+        selectedWords.length === cp.correctOrder.length &&
+        selectedWords.every((val, i) => val === cp.correctOrder[i]);
+      if (isMatch) {
+        SoundEngine.coin();
+        showEvidenceStep(cp);
+      } else {
+        handleCheckpointWrong(cp, cp.hint);
+      }
+    };
+
+    renderOrderUI();
+    area.appendChild(answerSlots);
+    area.appendChild(wordBank);
+    area.appendChild(checkBtn);
+  } else if (cp.type === 'classify') {
+    const assignments = {};
+    const list = document.createElement('div');
+    list.className = 'space-y-2.5 mb-3';
+
+    cp.items.forEach((item, idx) => {
+      const row = document.createElement('div');
+      row.className = 'flex items-center justify-between gap-2 bg-slate-800/80 border border-slate-700 p-2.5 rounded-2xl';
+
+      const wordLabel = document.createElement('span');
+      wordLabel.className = 'q-opt-text arabic-grammar-text font-black text-amber-300 px-2';
+      wordLabel.textContent = item.text;
+
+      const btns = document.createElement('div');
+      btns.className = 'flex items-center gap-1.5';
+
+      const makeCatBtn = (catKey, label) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold border border-slate-600 bg-slate-900 text-slate-300 cursor-pointer transition';
+        b.textContent = label;
+        b.onclick = () => {
+          assignments[idx] = catKey;
+          Array.from(btns.children).forEach(ch => {
+            ch.className = 'px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold border border-slate-600 bg-slate-900 text-slate-300 cursor-pointer transition';
+          });
+          b.className = 'px-3 py-1.5 rounded-xl text-xs sm:text-sm font-black border-2 border-amber-400 bg-amber-500 text-slate-950 cursor-pointer transition';
+        };
+        return b;
+      };
+
+      btns.appendChild(makeCatBtn('verbs5', 'الأفعال الخمسة'));
+      btns.appendChild(makeCatBtn('nouns5', 'الأسماء الخمسة'));
+      row.appendChild(wordLabel);
+      row.appendChild(btns);
+      list.appendChild(row);
+    });
+
+    const checkBtn = document.createElement('button');
+    checkBtn.type = 'button';
+    checkBtn.className = 'retro-btn w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2.5 rounded-2xl cursor-pointer';
+    checkBtn.textContent = 'تأكيد التصنيف ✓';
+    checkBtn.onclick = () => {
+      const allCorrect = cp.items.every((item, idx) => assignments[idx] === item.category);
+      if (allCorrect) {
+        SoundEngine.coin();
+        showEvidenceStep(cp);
+      } else {
+        handleCheckpointWrong(cp, cp.hint);
+      }
+    };
+
+    area.appendChild(list);
+    area.appendChild(checkBtn);
+  }
+
+  modal.classList.remove('hidden');
+}
+
+// الخطوة الثانية: اختيار الدليل النحوي (DOK 2)
+function showEvidenceStep(cp) {
+  const area = document.getElementById('cp-interaction-area');
+  area.innerHTML = '<div class="bg-emerald-900/40 border border-emerald-500/60 text-emerald-300 font-bold text-center py-2 px-3 rounded-xl text-sm">✅ إجابة صحيحة! الآن أثبت فهمك باختيار الدليل النحوي:</div>';
+
+  const evBox = document.getElementById('cp-evidence-box');
+  const evOpts = document.getElementById('cp-evidence-options');
+  evOpts.innerHTML = '';
+
+  const titleEl = evBox.querySelector('p');
+  titleEl.textContent = `🧠 الخطوة الثانية: ${cp.evidenceQuestion}`;
+
+  const shuffledEvidence = shuffleArray(cp.evidenceOptions);
+  shuffledEvidence.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'retro-btn q-opt-text w-full bg-slate-900 hover:bg-emerald-700 border-2 border-emerald-600/70 text-white font-bold py-2.5 px-4 rounded-xl text-right cursor-pointer';
+    btn.textContent = opt.text;
+    btn.onclick = () => {
+      if (opt.correct) {
+        handleCheckpointSuccess(cp);
+      } else {
+        handleCheckpointWrong(cp, cp.hint);
+      }
+    };
+    evOpts.appendChild(btn);
+  });
+
+  evBox.classList.remove('hidden');
+}
+
+function handleCheckpointSuccess(cp) {
+  clearInterval(GameState.timerInterval);
+  SoundEngine.correct();
+
+  GameState.passedCheckpoints[cp.id] = true;
+  GameState.score += 150;
+  GameState.coins += 5;
+
+  // منح وسام الإنجاز المرتبط بنقطة التفتيش
+  if (cp.badgeKey && !GameState.unlockedBadges[cp.badgeKey]) {
+    GameState.unlockedBadges[cp.badgeKey] = true;
+    const badgeObj = BADGES_INFO.find(b => b.key === cp.badgeKey);
+    if (badgeObj) {
+      showToast(badgeObj.icon, `وسام جديد: ${badgeObj.title}!`);
+    }
+  } else {
+    showToast('🎉', 'أحسنت! فُتحت نقطة التفتيش وحصلت على +150 نقطة!');
+  }
+
+  // مكافأة فطر قدرة عند الاجتياز
+  const p = GameState.player;
+  if (p.power === 'small') setPlayerPower('super');
+  else if (p.power === 'super') setPlayerPower('fire');
+
+  updateHUD();
+  document.getElementById('checkpoint-modal').classList.add('hidden');
+  GameState.activeCheckpoint = null;
+  GameState.paused = false;
+}
+
+function handleCheckpointWrong(cp, hintMessage) {
+  clearInterval(GameState.timerInterval);
+  SoundEngine.wrong();
+
+  const fbBox = document.getElementById('cp-feedback-box');
+  fbBox.className = 'rounded-2xl p-3.5 text-sm sm:text-base font-bold text-center bg-rose-950/90 border-2 border-rose-500 text-rose-200 animate-pop';
+  fbBox.innerHTML = `❌ إجابة غير دقيقة!<br><span class="text-amber-300 text-xs sm:text-sm font-normal">💡 تلميح: ${hintMessage}</span><br><span class="text-slate-300 text-xs mt-1 block">ستعود الآن إلى نقطة التفتيش السابقة للمحاولة من جديد...</span>`;
+  fbBox.classList.remove('hidden');
+
+  setTimeout(() => {
+    document.getElementById('checkpoint-modal').classList.add('hidden');
+    GameState.activeCheckpoint = null;
+    GameState.paused = false;
+
+    const prevPos = getPreviousCheckpointPos(cp.id);
+    resetPlayerPosition(prevPos.x, prevPos.y);
+    respawnAllEnemies();
+    showToast('↩️', `عدت إلى ${prevPos.label}! ركّز في القاعدة النحوية وحاول مجدداً.`);
+  }, 2400);
+}
+
+function completeStage() {
+  GameState.paused = true;
+  SoundEngine.stageClear();
+  GameState.score += 250;
+  updateHUD();
+
+  const stage = STAGES_DATA[GameState.currentStageIdx];
+  const isLast = GameState.currentStageIdx >= STAGES_DATA.length - 1;
+
+  document.getElementById('sc-emoji').textContent = isLast ? '👑🏆👑' : '🎉🚩🎉';
+  document.getElementById('sc-title').textContent = isLast
+    ? 'مبارك! أصبحت بطل مملكة النحو!'
+    : `أحسنت! أتممت ${stage.title}`;
+  document.getElementById('sc-desc').textContent = isLast
+    ? 'لقد اجتزت جميع المراحل الأربع وأثبتّ براعتك في التمييز بين الأفعال الخمسة والأسماء الخمسة بالأدلة النحوية!'
+    : 'استعد للانتقال إلى العالم التالي بتحديات لغوية أكثر تشويقاً!';
+  document.getElementById('sc-score').textContent = GameState.score;
+  document.getElementById('sc-coins').textContent = GameState.coins;
+
+  const nextBtn = document.getElementById('btn-next-stage');
+  nextBtn.textContent = isLast ? 'العب من البداية 🔄' : 'المرحلة التالية ⬅️';
+
+  document.getElementById('stage-complete-modal').classList.remove('hidden');
+}
+
+// ============================================================================
+// 8. الرسم على اللوحة (Canvas Rendering)
+// ============================================================================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  canvas.width = GameState.VIEW_W;
+  canvas.height = GameState.VIEW_H;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+function roundRect(ctx, x, y, w, h, r, fill = true, stroke = false) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+  if (fill) ctx.fill();
+  if (stroke) ctx.stroke();
+}
+
+function renderGame() {
+  const stage = STAGES_DATA[GameState.currentStageIdx];
+  const camX = GameState.cameraX;
+
+  // 1. رسم الخلفية حسب بيئة المرحلة أو غرفة المكافآت
+  const grad = ctx.createLinearGradient(0, 0, 0, GameState.VIEW_H);
+  if (GameState.inBonusRoom) {
+    grad.addColorStop(0, '#0f172a');
+    grad.addColorStop(1, '#1e1b4b');
+  } else {
+    grad.addColorStop(0, stage.skyTop);
+    grad.addColorStop(1, stage.skyBottom);
+  }
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, GameState.VIEW_W, GameState.VIEW_H);
+
+  // عناصر الخلفية البعيدة (سحب / أهرامات / جبال)
+  if (!GameState.inBonusRoom) {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+    for (let i = 0; i < 10; i++) {
+      const cx = ((i * 420 - camX * 0.35) % (GameState.VIEW_W + 240) + (GameState.VIEW_W + 240)) % (GameState.VIEW_W + 240) - 120;
+      const cy = 65 + (i % 3) * 35;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 24, 0, Math.PI * 2);
+      ctx.arc(cx + 22, cy - 6, 28, 0, Math.PI * 2);
+      ctx.arc(cx + 46, cy, 22, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (stage.theme === 'desert') {
+      ctx.fillStyle = 'rgba(180, 83, 9, 0.28)';
+      for (let i = 0; i < 6; i++) {
+        const px = ((i * 680 - camX * 0.45) % (GameState.VIEW_W + 300) + (GameState.VIEW_W + 300)) % (GameState.VIEW_W + 300) - 150;
+        ctx.beginPath();
+        ctx.moveTo(px, 460);
+        ctx.lineTo(px + 110, 290);
+        ctx.lineTo(px + 220, 460);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+  } else {
+    ctx.fillStyle = '#fde047';
+    ctx.font = 'bold 22px Cairo';
+    ctx.textAlign = 'center';
+    ctx.fillText('✨ غرفة الكنوز السرية ✨', GameState.VIEW_W / 2, 65);
+  }
+
+  ctx.save();
+  ctx.translate(-camX, 0);
+
+  // 2. رسم المنصات والأرضيات
+  for (const plat of GameState.platforms) {
+    if (plat.isGround) {
+      ctx.fillStyle = GameState.inBonusRoom ? '#334155' : stage.groundFill;
+      ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
+      ctx.fillStyle = GameState.inBonusRoom ? '#10b981' : stage.groundTop;
+      ctx.fillRect(plat.x, plat.y, plat.w, 16);
+    } else {
+      ctx.fillStyle = '#92400e';
+      roundRect(ctx, plat.x, plat.y, plat.w, plat.h, 8, true);
+      ctx.fillStyle = '#f59e0b';
+      roundRect(ctx, plat.x + 2, plat.y + 2, plat.w - 4, 8, 4, true);
+    }
+  }
+
+  // 3. رسم كتل الاستفهام (؟)
+  for (const b of GameState.blocks) {
+    const by = b.y + b.bumpY;
+    ctx.fillStyle = b.used ? '#64748b' : '#f59e0b';
+    roundRect(ctx, b.x, by, b.w, b.h, 8, true);
+    ctx.strokeStyle = b.used ? '#475569' : '#fef08a';
+    ctx.lineWidth = 2.5;
+    roundRect(ctx, b.x + 2, by + 2, b.w - 4, b.h - 4, 6, false, true);
+
+    ctx.fillStyle = b.used ? '#cbd5e1' : '#451a03';
+    ctx.font = '900 22px Cairo';
+    ctx.textAlign = 'center';
+    ctx.fillText(b.used ? '•' : '؟', b.x + b.w / 2, by + 28);
+  }
+
+  // 4. رسم المواسير الخضراء
+  for (const pipe of GameState.pipes) {
+    ctx.fillStyle = '#15803d';
+    roundRect(ctx, pipe.x + 4, pipe.y + 18, pipe.w - 8, pipe.h - 18, 4, true);
+    ctx.fillStyle = '#22c55e';
+    roundRect(ctx, pipe.x, pipe.y, pipe.w, 20, 6, true);
+    ctx.strokeStyle = '#86efac';
+    ctx.lineWidth = 2;
+    roundRect(ctx, pipe.x + 1, pipe.y + 1, pipe.w - 2, 18, 5, false, true);
+
+    if (pipe.hasSecret || pipe.isBonusExit) {
+      ctx.fillStyle = '#fef08a';
+      ctx.font = 'bold 12px Cairo';
+      ctx.textAlign = 'center';
+      ctx.fillText(pipe.isBonusExit ? '▲ خروج' : '▼ سرّي', pipe.x + pipe.w / 2, pipe.y - 6);
+    }
+  }
+
+  // 5. رسم نقاط التفتيش (Checkpoints) والحاجز الضوئي الممتد للأعلى
+  if (!GameState.inBonusRoom) {
+    for (const cp of stage.checkpoints) {
+      const passed = !!GameState.passedCheckpoints[cp.id];
+
+      // حاجز ضوئي عمودي يمتد لأعلى الشاشة لإبلاغ اللاعب بصرياً باستحالة القفز فوق البوابة
+      if (!passed) {
+        const beamGrad = ctx.createLinearGradient(cp.x + 14, 0, cp.x + 24, 0);
+        beamGrad.addColorStop(0, 'rgba(244, 63, 94, 0.12)');
+        beamGrad.addColorStop(0.5, 'rgba(251, 191, 36, 0.55)');
+        beamGrad.addColorStop(1, 'rgba(244, 63, 94, 0.12)');
+        ctx.fillStyle = beamGrad;
+        ctx.fillRect(cp.x + 14, 0, 10, 460);
+
+        // لافتة تحذيرية لطيفة أعلى الحاجز
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        roundRect(ctx, cp.x - 28, 120, 94, 28, 8, true);
+        ctx.fillStyle = '#fde047';
+        ctx.font = 'bold 12px Cairo';
+        ctx.textAlign = 'center';
+        ctx.fillText('🔒 بوابة سؤال', cp.x + 19, 138);
+      }
+
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillRect(cp.x + 16, 330, 6, 130);
+      ctx.fillStyle = passed ? '#10b981' : '#f43f5e';
+      roundRect(ctx, cp.x + 22, 335, 48, 32, 6, true);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 13px Cairo';
+      ctx.textAlign = 'center';
+      ctx.fillText(passed ? 'تم ✓' : 'تحدي', cp.x + 46, 355);
+    }
+
+    // راية نهاية المرحلة (تبدأ مرتفعة وتنزل تدريجياً عند لمسها)
+    const gf = GameState.goalFlag;
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(gf.x + 16, gf.y, 8, gf.h);
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.arc(gf.x + 20, gf.y, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = gf.lowered ? '#f59e0b' : '#10b981';
+    roundRect(ctx, gf.x + 24, gf.y + gf.flagOffsetY, 64, 38, 8, true);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '900 15px Cairo';
+    ctx.textAlign = 'center';
+    ctx.fillText('النهاية 👑', gf.x + 56, gf.y + gf.flagOffsetY + 24);
+  }
+
+  // 6. رسم العملات الذهبية
+  for (const c of GameState.coinsList) {
+    if (c.collected) continue;
+    const offsetY = Math.sin(c.bob) * 4;
+    ctx.fillStyle = '#facc15';
+    ctx.beginPath();
+    ctx.ellipse(c.x, c.y + offsetY, 10, 13, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#fef08a';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  // 7. رسم فطر القدرات
+  for (const pu of GameState.powerups) {
+    ctx.fillStyle = '#fde68a';
+    roundRect(ctx, pu.x + 8, pu.y + 16, 16, 15, 5, true);
+    ctx.fillStyle = pu.kind === 'fire' ? '#ef4444' : '#f59e0b';
+    ctx.beginPath();
+    ctx.arc(pu.x + 16, pu.y + 16, 15, Math.PI, 0);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(pu.x + 11, pu.y + 9, 3.5, 0, Math.PI * 2);
+    ctx.arc(pu.x + 21, pu.y + 9, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 8. رسم الأعداء (وحوش بأرجل متحركة، سلاحف بصدفة، ووحوش قافزة)
+  for (const en of GameState.enemies) {
+    if (!en.alive) continue;
+    const footSwing = Math.sin(en.walkAnim) * 4.5;
+    const facing = en.vx >= 0 ? 1 : -1;
+
+    if (en.kind === 'turtle') {
+      const isRed = en.shellColor === 'red';
+      const shellMain = isRed ? '#dc2626' : '#16a34a';
+      const shellLight = isRed ? '#f87171' : '#4ade80';
+
+      if (en.state === 'walk') {
+        // أرجل صغيرة تتحرك
+        ctx.fillStyle = '#f59e0b';
+        roundRect(ctx, en.x + 6 + footSwing, en.y + en.h - 9, 10, 9, 4, true);
+        roundRect(ctx, en.x + en.w - 16 - footSwing, en.y + en.h - 9, 10, 9, 4, true);
+
+        // رأس السلحفاة
+        const headX = facing === 1 ? en.x + en.w - 3 : en.x + 3;
+        const headY = en.y + en.h - 19;
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(headX, headY, 8.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(headX + facing * 2.5, headY - 2, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(headX + facing * 2.5 - 1, headY - 3, 2.2, 3);
+
+        // الصدفة
+        ctx.fillStyle = shellMain;
+        ctx.beginPath();
+        ctx.arc(en.x + en.w / 2, en.y + en.h - 12, 16.5, Math.PI, 0);
+        ctx.fill();
+        ctx.fillStyle = shellLight;
+        ctx.beginPath();
+        ctx.arc(en.x + en.w / 2, en.y + en.h - 18, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fef9c3';
+        roundRect(ctx, en.x + 2, en.y + en.h - 14, en.w - 4, 5, 2.5, true);
+      } else {
+        // السلحفاة داخل الصدفة (الأقدام والرأس مختبئة بالداخل)
+        ctx.fillStyle = shellMain;
+        roundRect(ctx, en.x + 2, en.y + 2, en.w - 4, en.h - 4, 13, true);
+        ctx.fillStyle = '#fef9c3';
+        roundRect(ctx, en.x + 1, en.y + en.h - 8, en.w - 2, 6, 3, true);
+
+        // اهتزاز تحذيري خفيف في آخر ثانية قبل خروج السلحفاة من الدرع
+        let warnShift = 0;
+        if (en.state === 'shell_idle' && en.shellRecoverTimer > 0 && en.shellRecoverTimer < 60) {
+          warnShift = Math.sin(en.shellRecoverTimer * 0.9) * 2.5;
+        }
+        const spinShift = en.state === 'shell_slide' ? Math.sin(en.walkAnim) * 6 : warnShift;
+        ctx.fillStyle = shellLight;
+        ctx.beginPath();
+        ctx.arc(en.x + en.w / 2 + spinShift, en.y + 12, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (en.kind === 'hopper') {
+      // أرجل صغيرة تتحرك
+      ctx.fillStyle = '#1e1b4b';
+      roundRect(ctx, en.x + 6 + footSwing, en.y + en.h - 8, 10, 8, 4, true);
+      roundRect(ctx, en.x + en.w - 16 - footSwing, en.y + en.h - 8, 10, 8, 4, true);
+
+      // أجنحة صغيرة ترفرف
+      const wingY = Math.sin(en.walkAnim * 2.4) * 5;
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath();
+      ctx.ellipse(en.x + 1, en.y + 17 + wingY, 7, 4.5, -0.35, 0, Math.PI * 2);
+      ctx.ellipse(en.x + en.w - 1, en.y + 17 + wingY, 7, 4.5, 0.35, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#0d9488';
+      roundRect(ctx, en.x + 3, en.y + 4, en.w - 6, en.h - 10, 13, true);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(en.x + 9, en.y + 12, 7, 8);
+      ctx.fillRect(en.x + 22, en.y + 12, 7, 8);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(en.x + 11, en.y + 14, 3, 4);
+      ctx.fillRect(en.x + 24, en.y + 14, 3, 4);
+    } else {
+      // وحش الفطر الكلاسيكي بأرجل صغيرة تتحرك
+      ctx.fillStyle = '#451a03';
+      roundRect(ctx, en.x + 5 + footSwing, en.y + en.h - 8, 11, 8, 4, true);
+      roundRect(ctx, en.x + en.w - 16 - footSwing, en.y + en.h - 8, 11, 8, 4, true);
+
+      ctx.fillStyle = '#fde68a';
+      roundRect(ctx, en.x + 9, en.y + en.h - 16, en.w - 18, 10, 4, true);
+
+      ctx.fillStyle = stage.theme === 'castle' ? '#7c3aed' : '#991b1b';
+      roundRect(ctx, en.x + 2, en.y + 3, en.w - 4, en.h - 14, 13, true);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(en.x + 8, en.y + 11, 7, 8);
+      ctx.fillRect(en.x + 23, en.y + 11, 7, 8);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(en.x + 10, en.y + 13, 3, 4);
+      ctx.fillRect(en.x + 25, en.y + 13, 3, 4);
+    }
+  }
+
+  // 9. رسم كرات اللهب النحوية
+  for (const fb of GameState.fireballs) {
+    ctx.fillStyle = '#f97316';
+    ctx.beginPath();
+    ctx.arc(fb.x + 7, fb.y + 7, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fef08a';
+    ctx.beginPath();
+    ctx.arc(fb.x + 7, fb.y + 7, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 10. رسم البطل (فارس النحو)
+  const p = GameState.player;
+  const blink = p.invulnTimer > 0 && Math.floor(p.invulnTimer / 5) % 2 === 0;
+  if (!blink) {
+    const legSwing = Math.sin(p.animFrame) * 4;
+    // الأرجل
+    ctx.fillStyle = '#1e3a8a';
+    roundRect(ctx, p.x + 6 + legSwing, p.y + p.h - 12, 10, 12, 4, true);
+    roundRect(ctx, p.x + p.w - 16 - legSwing, p.y + p.h - 12, 10, 12, 4, true);
+
+    // الجسم والملابس حسب القدرة
+    ctx.fillStyle = p.power === 'fire' ? '#f8fafc' : '#dc2626';
+    roundRect(ctx, p.x + 4, p.y + 16, p.w - 8, p.h - 26, 8, true);
+
+    // الرأس
+    ctx.fillStyle = '#fed7aa';
+    roundRect(ctx, p.x + 5, p.y + 4, p.w - 10, 18, 7, true);
+
+    // القبعة الملكية
+    ctx.fillStyle = p.power === 'fire' ? '#ef4444' : '#eab308';
+    roundRect(ctx, p.x + 2, p.y, p.w - 4, 8, 4, true);
+
+    // العين في اتجاه الحركة
+    ctx.fillStyle = '#0f172a';
+    const eyeX = p.facing === 1 ? p.x + p.w - 12 : p.x + 8;
+    ctx.fillRect(eyeX, p.y + 10, 4, 5);
+  }
+
+  // 11. رسم الجسيمات والنصوص العائمة
+  for (const pt of GameState.particles) {
+    ctx.fillStyle = pt.color;
+    ctx.fillRect(pt.x, pt.y, 5, 5);
+  }
+
+  for (const ft of GameState.floatingTexts) {
+    ctx.fillStyle = ft.color;
+    ctx.font = '900 16px Cairo';
+    ctx.textAlign = 'center';
+    ctx.fillText(ft.text, ft.x, ft.y);
+  }
+
+  ctx.restore();
+}
+
+function gameLoop() {
+  updatePhysics();
+  renderGame();
+  requestAnimationFrame(gameLoop);
+}
+
+// ============================================================================
+// 9. تحديث الواجهة وأزرار التحكم والتمايز الشامل (UDL)
+// ============================================================================
+function updateHUD() {
+  const hearts = GameState.lives > 0 ? '❤️'.repeat(GameState.lives) : '💔';
+  document.getElementById('hud-lives').textContent = hearts;
+  document.getElementById('hud-coins').textContent = GameState.coins;
+  document.getElementById('hud-score').textContent = GameState.score;
+
+  const p = GameState.player;
+  const powerLabel = p.power === 'fire' ? '🔥 ناري' : (p.power === 'super' ? '🍄 عملاق' : '🛡️ عادي');
+  document.getElementById('hud-powerup').textContent = powerLabel;
+
+  const unlockedCount = Object.keys(GameState.unlockedBadges).length;
+  document.getElementById('badge-count').textContent = `${unlockedCount}/${BADGES_INFO.length}`;
+}
+
+let toastTimeout = null;
+function showToast(icon, text) {
+  const banner = document.getElementById('toast-banner');
+  document.getElementById('toast-icon').textContent = icon;
+  document.getElementById('toast-text').textContent = text;
+  banner.classList.remove('hidden');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => {
+    banner.classList.add('hidden');
+  }, 3200);
+}
+
+function renderBadgesModal() {
+  const grid = document.getElementById('badges-grid');
+  grid.innerHTML = '';
+  BADGES_INFO.forEach(b => {
+    const unlocked = !!GameState.unlockedBadges[b.key];
+    const card = document.createElement('div');
+    card.className = `p-3 rounded-2xl border flex items-center gap-3 ${
+      unlocked
+        ? 'bg-amber-500/15 border-amber-400 text-white'
+        : 'bg-slate-950/60 border-slate-800 text-slate-500'
+    }`;
+    card.innerHTML = `
+      <div class="text-3xl">${unlocked ? b.icon : '🔒'}</div>
+      <div>
+        <div class="font-black text-sm ${unlocked ? 'text-amber-300' : 'text-slate-400'}">${b.title}</div>
+        <div class="text-xs">${b.desc}</div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  const lbList = document.getElementById('leaderboard-list');
+  const leaders = [
+    { name: 'أنت (فارس النحو) 🌟', score: GameState.score, isMe: true },
+    { name: 'سارة بطلة الإعراب', score: 950, isMe: false },
+    { name: 'عمر صديق القواعد', score: 720, isMe: false },
+    { name: 'ليان نجمة اللغة', score: 540, isMe: false }
+  ].sort((a, b) => b.score - a.score);
+
+  lbList.innerHTML = leaders.map((item, idx) => `
+    <div class="flex items-center justify-between px-3 py-2 rounded-xl ${
+      item.isMe ? 'bg-emerald-950/70 border border-emerald-500/60 text-emerald-200 font-black' : 'bg-slate-900 text-slate-300'
+    }">
+      <span>#${idx + 1} ${item.name}</span>
+      <span class="text-amber-400 font-bold">⭐ ${item.score}</span>
+    </div>
+  `).join('');
+}
+
+// تهيئة مستمعي الأحداث
+document.addEventListener('DOMContentLoaded', () => {
+  buildStage(0);
+  requestAnimationFrame(gameLoop);
+
+  // زر البدء الرئيسي
+  const startBtn = document.getElementById('btn-start-game');
+  startBtn.addEventListener('click', () => {
+    SoundEngine.init();
+    SoundEngine.checkpoint();
+    document.getElementById('start-overlay').classList.add('hidden');
+    GameState.started = true;
+    GameState.paused = false;
+  });
+
+  // اختيار المرحلة من القائمة المنسدلة
+  document.getElementById('stage-selector').addEventListener('change', (e) => {
+    SoundEngine.init();
+    const idx = parseInt(e.target.value, 10) || 0;
+    GameState.lives = 3;
+    buildStage(idx);
+    GameState.paused = false;
+  });
+
+  // تكبير الخط UDL
+  const fontClasses = ['font-size-normal', 'font-size-large', 'font-size-xlarge'];
+  const fontLabels = ['خط عادي', 'خط كبير', 'خط كبير جداً'];
+  document.getElementById('btn-font-size').addEventListener('click', () => {
+    document.body.classList.remove(fontClasses[GameState.fontSizeIndex]);
+    GameState.fontSizeIndex = (GameState.fontSizeIndex + 1) % fontClasses.length;
+    document.body.classList.add(fontClasses[GameState.fontSizeIndex]);
+    document.getElementById('font-size-label').textContent = fontLabels[GameState.fontSizeIndex];
+  });
+
+  // تبديل الصعوبة
+  document.getElementById('btn-difficulty').addEventListener('click', () => {
+    GameState.difficulty = GameState.difficulty === 'beginner' ? 'advanced' : 'beginner';
+    document.getElementById('difficulty-label').textContent = GameState.difficulty === 'beginner' ? 'مبتدئ' : 'متقدم';
+    showToast('🎯', `تم التبديل إلى نمط: ${GameState.difficulty === 'beginner' ? 'مبتدئ (مريح)' : 'متقدم (تحدي)'}`);
+  });
+
+  // تفعيل/إيقاف المؤقت الزمني UDL
+  document.getElementById('btn-timer-toggle').addEventListener('click', () => {
+    GameState.timerEnabled = !GameState.timerEnabled;
+    document.getElementById('timer-label').textContent = GameState.timerEnabled ? 'مؤقت: مفعّل' : 'مؤقت: متوقف';
+  });
+
+  // القراءة الصوتية للسؤال UDL
+  document.getElementById('btn-read-aloud').addEventListener('click', () => {
+    const text = document.getElementById('cp-question-text').textContent;
+    if ('speechSynthesis' in window && text) {
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = 'ar-SA';
+      utter.rate = 0.92;
+      window.speechSynthesis.speak(utter);
+    }
+  });
+
+  // نافذة الأوسمة
+  document.getElementById('btn-badges').addEventListener('click', () => {
+    renderBadgesModal();
+    document.getElementById('badges-modal').classList.remove('hidden');
+  });
+  document.getElementById('btn-close-badges').addEventListener('click', () => {
+    document.getElementById('badges-modal').classList.add('hidden');
+  });
+
+  // كتم الصوت
+  document.getElementById('btn-mute').addEventListener('click', (e) => {
+    SoundEngine.muted = !SoundEngine.muted;
+    e.currentTarget.textContent = SoundEngine.muted ? '🔇' : '🔊';
+  });
+
+  // أزرار نافذة إتمام المرحلة
+  document.getElementById('btn-next-stage').addEventListener('click', () => {
+    document.getElementById('stage-complete-modal').classList.add('hidden');
+    const nextIdx = (GameState.currentStageIdx + 1) % STAGES_DATA.length;
+    GameState.lives = 3;
+    buildStage(nextIdx);
+    GameState.paused = false;
+  });
+
+  document.getElementById('btn-replay-stage').addEventListener('click', () => {
+    document.getElementById('stage-complete-modal').classList.add('hidden');
+    GameState.lives = 3;
+    buildStage(GameState.currentStageIdx);
+    GameState.paused = false;
+  });
+
+  // زر إعادة المرحلة عند انتهاء المحاولات
+  document.getElementById('btn-restart-stage').addEventListener('click', () => {
+    document.getElementById('game-over-modal').classList.add('hidden');
+    GameState.lives = 3;
+    setPlayerPower('small');
+    buildStage(GameState.currentStageIdx);
+    GameState.paused = false;
+  });
+
+  // لوحة المفاتيح
+  window.addEventListener('keydown', (e) => {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+      e.preventDefault();
+    }
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') Keys.left = true;
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') Keys.right = true;
+    if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') {
+      if (!e.repeat && !Keys.up) {
+        triggerJumpPress();
+      }
+      Keys.up = true;
+    }
+    if (e.code === 'ArrowDown' || e.code === 'KeyS') Keys.down = true;
+    if (e.code === 'KeyZ' || e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyF') {
+      shootFireball();
+    }
+  });
+
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') Keys.left = false;
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') Keys.right = false;
+    if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') Keys.up = false;
+    if (e.code === 'ArrowDown' || e.code === 'KeyS') Keys.down = false;
+  });
+
+  // أزرار اللمس والماوس على الشاشة
+  const bindHoldButton = (id, keyName, onPressCallback = null) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const start = (e) => {
+      e.preventDefault();
+      SoundEngine.init();
+      if (!Keys[keyName] && onPressCallback) onPressCallback();
+      Keys[keyName] = true;
+    };
+    const end = (e) => {
+      e.preventDefault();
+      Keys[keyName] = false;
+    };
+    el.addEventListener('touchstart', start, { passive: false });
+    el.addEventListener('touchend', end);
+    el.addEventListener('touchcancel', end);
+    el.addEventListener('mousedown', start);
+    el.addEventListener('mouseup', end);
+    el.addEventListener('mouseleave', end);
+  };
+
+  bindHoldButton('touch-left', 'left');
+  bindHoldButton('touch-right', 'right');
+  bindHoldButton('touch-jump', 'up', triggerJumpPress);
+  bindHoldButton('touch-down', 'down');
+
+  const fireBtn = document.getElementById('touch-fire');
+  if (fireBtn) {
+    fireBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      SoundEngine.init();
+      shootFireball();
+    }, { passive: false });
+    fireBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      SoundEngine.init();
+      shootFireball();
+    });
+  }
+});
+</script>
+</body>
+</html>
